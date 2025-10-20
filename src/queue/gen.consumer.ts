@@ -51,10 +51,18 @@ export class GenConsumer {
       if (!template) {
         throw new Error('Template not found');
       }
-      const templatePath = join(process.cwd(), 'public', template.backgroundPath);
-      const templateFile = await fs.promises.readFile(templatePath);
-      const templateBuffer = Buffer.from(templateFile);
-      const templateBase64 = templateBuffer.toString('base64');
+      
+      // Check if template has backgroundPath (not null)
+      const templatePath = template.backgroundPath 
+        ? join(process.cwd(), 'public', template.backgroundPath)
+        : null;
+      
+      console.log('🎨 CONSUMER: Template info:', {
+        id: template.id,
+        name: template.name,
+        hasBackground: !!template.backgroundPath,
+        templatePath: templatePath
+      });
 
       // Enhance prompt
       await this.memoryCacheService.updateJobMetadata(jobId, {
@@ -107,8 +115,20 @@ export class GenConsumer {
       });
 
       // Sử dụng Gemini để chỉnh sửa ảnh
-      const editedImage = await this.geminiService.editImage(prompt, templateBase64, inputBuffer.toString('base64'));
+      const editedImage = await this.geminiService.editImage(prompt, inputBuffer.toString('base64'));
+      console.log('🎨 CONSUMER: Image edited by Gemini, size:', editedImage.length, 'bytes');
 
+      // Process image with template frame
+      await this.memoryCacheService.updateJobMetadata(jobId, {
+        progress: 70,
+        message: 'Đang tạo khung ảnh...',
+      });
+
+      this.realtimeService.emitJobProgress(jobId, {
+        status: 'running',
+        progress: 70,
+        message: 'Đang tạo khung ảnh...',
+      });
 
       // Save result
       await this.memoryCacheService.updateJobMetadata(jobId, {
@@ -122,8 +142,11 @@ export class GenConsumer {
         message: 'Saving result...',
       });
 
+      const result = await this.imageService.processImage(editedImage, templatePath || undefined);
+      console.log('🖼️ CONSUMER: Image processing completed, result size:', result.length, 'bytes');
+      
       await this.memoryCacheService.setJobResult(jobId, {
-        buffer: editedImage,
+        buffer: result,
         mimeType: 'image/webp',
         filename: `ai-generated-${jobId}.webp`,
         createdAt: new Date(),

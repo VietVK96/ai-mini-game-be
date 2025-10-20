@@ -26,6 +26,9 @@ export class TemplatesService {
      const files = await this.getFilesPath();
      for (const file of files) {
       try {
+        if (!file?.backgroundPath) {
+          continue
+        }
        const filePath = join(process.cwd(), 'public',file?.backgroundPath);
         const fileImage = await fs.promises.readFile(filePath);
         const base64Image = Buffer.from(fileImage).toString('base64');
@@ -44,10 +47,13 @@ export class TemplatesService {
     if (!file) {
        throw new BadRequestException('Template not found');
     }
-    const filePath = join(process.cwd(), 'public',file?.backgroundPath);
-    const fileImage = await fs.promises.readFile(filePath);
-    const base64Image = Buffer.from(fileImage).toString('base64');
-    file.file = base64Image;
+    if(file?.backgroundPath) {
+      const filePath = join(process.cwd(), 'public',file?.backgroundPath);
+      const fileImage = await fs.promises.readFile(filePath);
+      const base64Image = Buffer.from(fileImage).toString('base64');
+      file.file = base64Image;
+    }
+
     return file;
   }
 

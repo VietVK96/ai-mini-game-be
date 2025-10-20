@@ -53,61 +53,23 @@ export class GeminiService {
 
 
 
-  async editImage(prompt: string, template: string, inputImage: string): Promise<Buffer> {
+  async editImage(prompt: string, inputImage: string): Promise<Buffer> {
     try {
       // Validate base64 data
       if (!this.isValidBase64(inputImage)) {
         throw new Error('Invalid input image base64 data');
       }
-      if (!this.isValidBase64(template)) {
-        throw new Error('Invalid template base64 data');
-      }
-
-      // Get image dimensions for better context
-      const inputImageBuffer = Buffer.from(inputImage, 'base64');
-      const templateBuffer = Buffer.from(template, 'base64');
-      
-      console.log('🎨 GEMINI: Input image size:', inputImageBuffer.length, 'bytes');
-      console.log('🎨 GEMINI: Template size:', templateBuffer.length, 'bytes');
-
-      // Preprocess images for better composition
-      const { inputImage: processedInput, template: processedTemplate } = await this.preprocessImageForComposition(inputImage, template);
 
       const promptRequest = {
         contents: [{
           role: 'user',
           parts: [
             {
-              text: `You have two images:
-              1. First image (inputImage): The main subject image that needs to be edited according to the prompt: "${prompt}"
-              2. Second image (template): A frame/template image that will serve as the background frame
-
-              CRITICAL INSTRUCTIONS FOR PERFECT COMPOSITION:
-              1. First, edit the first image according to the prompt requirements: ${prompt}
-              2. Analyze the template image to identify the exact frame area where the edited image should be placed
-              3. Resize the edited first image to match the template's frame dimensions EXACTLY:
-                 - Calculate the exact width and height of the frame area in the template
-                 - Resize the edited image to fit perfectly within those dimensions
-                 - Maintain the aspect ratio while ensuring it fits the frame completely
-              4. Composite the resized edited image into the template frame:
-                 - Place the edited image exactly in the center of the frame area
-                 - Ensure the edited image fills the entire frame without being cut off
-                 - Make sure the edited image aligns perfectly with the template's frame boundaries
-                 - The final result should look like the edited image was originally part of the template
-              5. Return only the final composited image, no additional text or explanations.
-
-              Remember: The key is to make the edited image look like it was originally designed to fit this specific template frame.`
-            },
+             text: `Using the provided image please edit it to match the following requirements: ${prompt}. Return only the edited image, no additional text.` },
             {
               inlineData: {
                 mimeType: "image/png",
-                data: processedInput,
-              },
-            },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: processedTemplate,
+                data: inputImage,
               },
             },
           ]
@@ -163,16 +125,6 @@ export class GeminiService {
     }
   }
 
-  private async preprocessImageForComposition(inputImage: string, template: string): Promise<{ inputImage: string, template: string }> {
-    try {
-      // This method can be used to preprocess images if needed
-      // For now, just return the original images
-      return { inputImage, template };
-    } catch (error) {
-      console.error('Image preprocessing error:', error);
-      return { inputImage, template };
-    }
-  }
 
   async enhancePrompt(prompt: string): Promise<string> {
     try {
