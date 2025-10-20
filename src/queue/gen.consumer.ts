@@ -29,18 +29,10 @@ export class GenConsumer {
 
   @Process('generate')
   async handleGenerate(job: Job) {
-    console.log(`🔥🔥🔥 CONSUMER TRIGGERED! Job ID: ${job.id}`);
-    console.log(`🔥🔥🔥 CONSUMER: Full job object:`, JSON.stringify(job, null, 2));
-    
+    console.log(`🔥🔥🔥 CONSUMER TRIGGERED! Job ID: ${job.id}`);  
     const { jobId, file, prompt, templateId } = job.data;
     
     try {
-      console.log(`🚀🚀🚀 CONSUMER: Processing job ${jobId} with prompt: ${prompt}`);
-      console.log(`📊 CONSUMER: Job data:`, { jobId, prompt, templateId, hasFile: !!file });
-      console.log(`📊 CONSUMER: Job ID from Bull:`, job.id);
-      console.log(`📊 CONSUMER: Job attempts:`, job.attemptsMade);
-      console.log(`📊 CONSUMER: Job progress:`, job.progress());
-      console.log(`📊 CONSUMER: Job state:`, job.opts);
       // Update job status
       await this.memoryCacheService.updateJobMetadata(jobId, {
         status: 'running',

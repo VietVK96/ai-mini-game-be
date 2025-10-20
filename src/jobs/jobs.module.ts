@@ -11,6 +11,10 @@ import { QueueModule } from '../queue/queue.module';
   imports: [
     // Import QueueModule to access BullQueue_gen
     QueueModule,
+    // Register the 'gen' queue for injection in JobsService
+    BullModule.registerQueue({
+      name: 'gen',
+    }),
     MemoryCacheModule,
     RealtimeModule,
     ImageModule,

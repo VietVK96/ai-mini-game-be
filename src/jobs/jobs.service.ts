@@ -165,6 +165,45 @@ export class JobsService {
     }
   }
 
+  // Method to manually trigger queue processing
+  async triggerQueueProcessing() {
+    try {
+      console.log('🔄 TRIGGER: Manually triggering queue processing...');
+      
+      // Get waiting jobs
+      const waiting = await this.genQueue.getWaiting();
+      console.log('🔄 TRIGGER: Waiting jobs:', waiting.length);
+      
+      if (waiting.length > 0) {
+        console.log('🔄 TRIGGER: Found waiting jobs, attempting to process...');
+        
+        // Try to process the first waiting job
+        const firstJob = waiting[0];
+        console.log('🔄 TRIGGER: First waiting job:', firstJob.id, firstJob.data);
+        
+        // Check if job is still waiting
+        const jobState = await firstJob.getState();
+        console.log('🔄 TRIGGER: Job state:', jobState);
+        
+        return {
+          message: 'Queue processing triggered',
+          waitingJobs: waiting.length,
+          firstJobId: firstJob.id,
+          firstJobState: jobState
+        };
+      } else {
+        console.log('🔄 TRIGGER: No waiting jobs found');
+        return {
+          message: 'No waiting jobs to process',
+          waitingJobs: 0
+        };
+      }
+    } catch (error) {
+      console.error('🔄 TRIGGER: Failed to trigger queue processing:', error);
+      throw error;
+    }
+  }
+
   // Clear all jobs from queue
   async clearQueue() {
     try {

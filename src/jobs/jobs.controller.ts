@@ -103,6 +103,11 @@ export class JobsController {
     return this.jobsService.testQueue();
   }
 
+  @Post('test/trigger')
+  async triggerQueueProcessing() {
+    return this.jobsService.triggerQueueProcessing();
+  }
+
   @Delete('test/queue')
   async clearQueue() {
     return this.jobsService.clearQueue();

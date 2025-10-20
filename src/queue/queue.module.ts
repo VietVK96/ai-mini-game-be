@@ -11,15 +11,6 @@ import { GenConsumer } from './gen.consumer';
   imports: [
     BullModule.registerQueue({
       name: 'gen',
-      defaultJobOptions: {
-        removeOnComplete: 10,
-        removeOnFail: 5,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
-        },
-      },
     }),
     MemoryCacheModule,
     RealtimeModule,
@@ -28,11 +19,5 @@ import { GenConsumer } from './gen.consumer';
     TemplatesModule,
   ],
   providers: [GenConsumer],
-  exports: [BullModule, GenConsumer], // Export both BullModule and GenConsumer
 })
-export class QueueModule {
-  constructor() {
-    console.log('📦 QUEUE: QueueModule initialized with GenConsumer');
-    console.log('📦 QUEUE: Queue "gen" registered with BullModule');
-  }
-}
+export class QueueModule {}
