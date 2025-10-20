@@ -1,0 +1,36 @@
+[
+  {
+    "id": "poster-1",
+    "name": "Poster Cổ Điển",
+    "description": "Thiết kế poster với phong cách cổ điển, phù hợp cho sự kiện trang trọng",
+    "backgroundPath": "/templates/poster-classic-bg.png",
+    "overlayPath": "/templates/poster-classic-overlay.png",
+    "placement": {
+      "x": 100,
+      "y": 150,
+      "width": 300,
+      "height": 400
+    },
+    "aspectRatio": "4:5",
+    "category": "Poster",
+    "tags": ["cổ điển", "trang trọng", "sự kiện"],
+    "previewUrl": "/templates/poster-classic-preview.jpg"
+  },
+  {
+    "id": "social-1",
+    "name": "Instagram Story",
+    "description": "Template cho Instagram Story với tỷ lệ 9:16",
+    "backgroundPath": "/templates/instagram-story-bg.png",
+    "overlayPath": "/templates/instagram-story-overlay.png",
+    "placement": {
+      "x": 50,
+      "y": 5,
+      "width": 470,
+      "height": 360
+    },
+    "aspectRatio": "9:16",
+    "category": "Social",
+    "tags": ["instagram", "story", "social"],
+    "previewUrl": "/templates/instagram-story-preview.jpg"
+  }
+]

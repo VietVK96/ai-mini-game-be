@@ -1,0 +1,25 @@
+{
+  "watch": [
+    "src",
+    "public",
+    "templates"
+  ],
+  "ext": "ts,js,json",
+  "ignore": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "node_modules",
+    "dist",
+    "coverage"
+  ],
+  "exec": "nest start",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "delay": 1000,
+  "verbose": true,
+  "restartable": "rs",
+  "colours": true
+}
+
+
