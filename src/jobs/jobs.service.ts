@@ -6,6 +6,7 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { MemoryCacheService } from 'src/memory-cache/memory-cache.service';
 import { RealtimeService } from 'src/realtime/realtime.service';
 import { JobResult, JobMetadata } from 'src/memory-cache/memory-cache.types';
+import { GeminiService } from 'src/gemini/gemini.service';
 
 @Injectable()
 export class JobsService {
@@ -13,6 +14,7 @@ export class JobsService {
     @InjectQueue('gen') private genQueue: Queue,
     private memoryCacheService: MemoryCacheService,
     private realtimeService: RealtimeService,
+    private geminiService: GeminiService,
   ) {}
 
   async createJob(createJobDto: CreateJobDto) {
@@ -233,6 +235,25 @@ export class JobsService {
       };
     } catch (error) {
       console.error('🧹 CLEAR: Failed to clear queue:', error);
+      throw error;
+    }
+  }
+
+  // Get pricing information
+  async getPricingInfo() {
+    try {
+      console.log('💰 PRICING: Getting Gemini pricing information...');
+      
+      const pricingInfo = this.geminiService.getPricingInfo();
+      
+      return {
+        message: 'Pricing information retrieved successfully',
+        ...pricingInfo,
+        lastUpdated: new Date().toISOString(),
+        note: 'Prices are in USD and based on Google Gemini 2.5 Flash Image API pricing'
+      };
+    } catch (error) {
+      console.error('💰 PRICING: Failed to get pricing info:', error);
       throw error;
     }
   }

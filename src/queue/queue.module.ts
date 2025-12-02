@@ -3,7 +3,6 @@ import { BullModule } from '@nestjs/bull';
 import { MemoryCacheModule } from '../memory-cache/memory-cache.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { GeminiModule } from '../gemini/gemini.module';
-import { ImageModule } from '../image/image.module';
 import { TemplatesModule } from '../templates/templates.module';
 import { GenConsumer } from './gen.consumer';
 
@@ -15,7 +14,6 @@ import { GenConsumer } from './gen.consumer';
     MemoryCacheModule,
     RealtimeModule,
     GeminiModule,
-    ImageModule,
     TemplatesModule,
   ],
   providers: [GenConsumer],

@@ -112,4 +112,9 @@ export class JobsController {
   async clearQueue() {
     return this.jobsService.clearQueue();
   }
+
+  @Get('pricing')
+  async getPricing() {
+    return this.jobsService.getPricingInfo();
+  }
 }

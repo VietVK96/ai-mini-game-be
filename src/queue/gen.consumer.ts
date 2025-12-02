@@ -3,7 +3,6 @@ import { Job } from 'bull';
 import { MemoryCacheService } from '../memory-cache/memory-cache.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { GeminiService } from '../gemini/gemini.service';
-import { ImageService } from '../image/image.service';
 import { TemplatesService } from 'src/templates/templates.service';
 import * as fs from 'fs';
 import { join } from 'path';
@@ -14,7 +13,6 @@ export class GenConsumer {
     private memoryCacheService: MemoryCacheService,
     private realtimeService: RealtimeService,
     private geminiService: GeminiService,
-    private imageService: ImageService,
     private templatesService: TemplatesService,
   ) {
     console.log('🏭 CONSUMER: GenConsumer initialized and ready to process jobs');
@@ -22,7 +20,6 @@ export class GenConsumer {
       memoryCache: !!this.memoryCacheService,
       realtime: !!this.realtimeService,
       gemini: !!this.geminiService,
-      image: !!this.imageService,
       templates: !!this.templatesService,
     });
   }
@@ -57,37 +54,15 @@ export class GenConsumer {
         ? join(process.cwd(), 'public', template.backgroundPath)
         : null;
       
+      if (!templatePath) {
+        throw new Error('Template background path is required');
+      }
+
       console.log('🎨 CONSUMER: Template info:', {
         id: template.id,
         name: template.name,
         hasBackground: !!template.backgroundPath,
         templatePath: templatePath
-      });
-
-      // Enhance prompt
-      await this.memoryCacheService.updateJobMetadata(jobId, {
-        progress: 20,
-        message: 'Enhancing prompt...',
-      });
-
-      this.realtimeService.emitJobProgress(jobId, {
-        status: 'running',
-        progress: 20,
-        message: 'Enhancing prompt...',
-      });
-
-      // const enhancedPrompt = await this.geminiService.enhancePrompt(prompt);
-
-      // Generate enhanced prompt for image generation
-      await this.memoryCacheService.updateJobMetadata(jobId, {
-        progress: 40,
-        message: 'Tạo prompt nâng cao cho AI...',
-      });
-
-      this.realtimeService.emitJobProgress(jobId, {
-        status: 'running',
-        progress: 40,
-        message: 'Tạo prompt nâng cao cho AI...',
       });
 
       // Convert buffer data back to Buffer if it was serialized
@@ -101,34 +76,41 @@ export class GenConsumer {
         throw new Error('Invalid file buffer format');
       }
 
-
-      // AI Image Editing - Chỉnh sửa ảnh theo prompt
+      // Read background image from template file
       await this.memoryCacheService.updateJobMetadata(jobId, {
-        progress: 50,
-        message: 'AI đang chỉnh sửa ảnh...',
+        progress: 20,
+        message: 'Đang đọc ảnh background...',
       });
 
       this.realtimeService.emitJobProgress(jobId, {
         status: 'running',
-        progress: 50,
-        message: 'AI đang chỉnh sửa ảnh...',
+        progress: 20,
+        message: 'Đang đọc ảnh background...',
       });
 
-      // Sử dụng Gemini để chỉnh sửa ảnh
-      const editedImage = await this.geminiService.editImage(prompt, inputBuffer.toString('base64'));
-      console.log('🎨 CONSUMER: Image edited by Gemini, size:', editedImage.length, 'bytes');
+      const backgroundBuffer = await fs.promises.readFile(templatePath);
+      const backgroundBase64 = backgroundBuffer.toString('base64');
+      console.log('🎨 CONSUMER: Background image loaded, size:', backgroundBuffer.length, 'bytes');
 
-      // Process image with template frame
+      // AI Image Editing - Chỉnh sửa ảnh chính theo prompt và thay background
       await this.memoryCacheService.updateJobMetadata(jobId, {
-        progress: 70,
-        message: 'Đang tạo khung ảnh...',
+        progress: 40,
+        message: 'AI đang chỉnh sửa ảnh và thay background...',
       });
 
       this.realtimeService.emitJobProgress(jobId, {
         status: 'running',
-        progress: 70,
-        message: 'Đang tạo khung ảnh...',
+        progress: 40,
+        message: 'AI đang chỉnh sửa ảnh và thay background...',
       });
+
+      // Sử dụng Gemini để chỉnh sửa ảnh chính và thay background
+      const result = await this.geminiService.editImageWithBackground(
+        prompt, 
+        inputBuffer.toString('base64'),
+        backgroundBase64
+      );
+      console.log('🎨 CONSUMER: Image edited with background by Gemini, size:', result.length, 'bytes');
 
       // Save result
       await this.memoryCacheService.updateJobMetadata(jobId, {
@@ -141,14 +123,11 @@ export class GenConsumer {
         progress: 80,
         message: 'Saving result...',
       });
-
-      const result = await this.imageService.processImage(editedImage, templatePath || undefined);
-      console.log('🖼️ CONSUMER: Image processing completed, result size:', result.length, 'bytes');
       
       await this.memoryCacheService.setJobResult(jobId, {
         buffer: result,
-        mimeType: 'image/webp',
-        filename: `ai-generated-${jobId}.webp`,
+        mimeType: 'image/png',
+        filename: `ai-generated-${jobId}.png`,
         createdAt: new Date(),
       });
 

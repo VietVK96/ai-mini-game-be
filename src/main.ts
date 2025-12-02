@@ -26,8 +26,13 @@ async function bootstrap() {
           'http://localhost:8002',
           /^http:\/\/192\.168\.\d+\.\d+:(8001|8002)$/,  // Allow local network IPs
           /^http:\/\/10\.\d+\.\d+\.\d+:(8001|8002)$/,   // Allow 10.x.x.x network
-          /^http:\/\/172\.\d+\.\d+\.\d+:(8001|8002)$/,  // Allow 172.x.x.x network
-          /^http:\/\/58\.187\.175\.79:(8001|8002)$/,    // Allow specific IP
+          /^http:\/\/172\.\d+\.\d+\.\d+:(8001|8002)$/,
+          /^http:\/\/172\.24\.0\.1:(8001|8002)$/,
+          /^http:\/\/58\.186\.98\.56:(8001|8002)$/,
+          /^http:\/\/42\.119\.155\.107:(8001|8002)$/,
+          /^http:\/\/image-ai\.ddns\.net:(8001|8002)$/,
+          
+            // Allow specific IP
         ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

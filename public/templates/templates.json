@@ -1,30 +1,12 @@
 [
   {
-    "id": "none",
-    "name": "Không Khung",
-    "description": "Không sử dụng khung, chỉ chỉnh sửa ảnh theo prompt",
-    "backgroundPath": null,
-    "aspectRatio": "auto",
-    "category": "None",
-    "tags": ["không khung", "tự do"]
+    "id": "1",
+    "name": "Vàng cho chất",
+    "backgroundPath": "/templates/vang.png"
   },
   {
-    "id": "poster-1",
-    "name": "Poster phong cách",
-    "description": "Thiết kế poster với phong cách cổ điển, phù hợp cho sự kiện trang trọng",
-    "backgroundPath": "/templates/poster-classic-bg.png",
-    "overlayPath": "/templates/poster-classic-overlay.png",
-    "aspectRatio": "4:5",
-    "category": "Poster",
-    "tags": ["phong cách", "đột phá"]
-  },
-  {
-    "id": "social-1",
-    "name": "Instagram Story",
-    "description": "Template cho Instagram Story với tỷ lệ 9:16",
-    "backgroundPath": "/templates/instagram-story-bg.png",
-    "aspectRatio": "9:16",
-    "category": "Social",
-    "tags": ["instagram", "story", "social"]
+    "id": "2",
+    "name": "Đen cho ngầu",
+    "backgroundPath": "/templates/den.png"
   }
 ]

@@ -6,6 +6,7 @@ import { MemoryCacheModule } from '../memory-cache/memory-cache.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 import { ImageModule } from '../image/image.module';
 import { QueueModule } from '../queue/queue.module';
+import { GeminiModule } from '../gemini/gemini.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { QueueModule } from '../queue/queue.module';
     MemoryCacheModule,
     RealtimeModule,
     ImageModule,
+    GeminiModule,
   ],
   controllers: [JobsController],
   providers: [JobsService],
