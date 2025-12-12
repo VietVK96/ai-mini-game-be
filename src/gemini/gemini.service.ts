@@ -47,181 +47,87 @@ export class GeminiService {
     }
   }
 
-  private createTextRequest(text: string): GeminiRequest {
-    return {
-      contents: [{
-        role: 'user',
-        parts: [{
-          text: text,
-        }],
-      }],
-    };
-  }
 
 
-
-  async editImage(prompt: string, inputImage: string): Promise<Buffer> {
-    try {
-      console.log('🎨 GEMINI: Starting image editing with accurate pricing...');
-      
-      // Validate base64 data
-      if (!this.isValidBase64(inputImage)) {
-        throw new Error('Invalid input image base64 data');
-      }
-
-      // Build contents for API
-      const contents = this.buildContents(inputImage, "image/jpeg", 
-        `Using the provided image please edit it to match the following requirements: ${prompt}. Return only ONE edited image, no additional text or multiple images.`
-      );
-
-      // 1) Count input tokens first
-      console.log('💰 GEMINI: Counting input tokens...');
-      const { totalTokens = 0 } = await this.genAI.models.countTokens({ 
-        model: "gemini-2.5-flash-image", 
-        contents 
-      });
-      
-      // 2) Estimate cost before making the request
-      const preEstimate = this.estimatePreCost(totalTokens, 1);
-      console.log('💰 GEMINI: Pre-estimate cost:', {
-        inputTokens: preEstimate.inputTokens,
-        inputCostUSD: `$${preEstimate.inputCostUSD.toFixed(6)}`,
-        outputImagesCostUSD: `$${preEstimate.outputImagesCostUSD.toFixed(6)}`,
-        totalUSD: `$${preEstimate.totalUSD.toFixed(6)}`
-      });
-
-      // 3) Make the API call
-      console.log('🎨 GEMINI: Making API call...');
-      const response = await this.genAI.models.generateContent({
-        model: "gemini-2.5-flash-image",
-        contents,
-        config: { responseModalities: ["IMAGE"] }
-      });
-      
-      if (!response.candidates || response.candidates.length === 0) {
-        throw new Error('No response candidates from Gemini API');
-      }
-      console.log(response?.text);
-      
-
-      // 4) Get usage metadata and calculate actual cost
-      const usage = (response as any).usageMetadata || {};
-      const candidates = (response as any)?.candidates ?? [];
-      const imagesOutActual = candidates.flatMap((c: any) => c?.content?.parts ?? [])
-        .filter((p: any) => p?.inlineData?.data).length || 1;
-
-      const actualCost = this.calculateActualCost(usage, imagesOutActual);
-      console.log('💰 GEMINI: Actual cost after API call:', {
-        promptTokens: actualCost.promptTokens,
-        outputTokens: actualCost.outputTokens,
-        imagesOut: actualCost.imagesOut,
-        inputCostUSD: `$${actualCost.inputCostUSD.toFixed(6)}`,
-        outputImagesCostUSD: `$${actualCost.outputImagesCostUSD.toFixed(6)}`,
-        outputTextCostUSD: `$${actualCost.outputTextCostUSD.toFixed(6)}`,
-        totalUSD: `$${actualCost.totalUSD.toFixed(6)}`
-      });
-
-      const candidate = response.candidates[0];
-      if (!candidate.content || !candidate.content.parts) {
-        throw new Error('Invalid response structure from Gemini API');
-      }
-
-      for (const part of candidate.content.parts) {
-        if (part.text) {
-          console.log('🎨 GEMINI: Text response:', part.text);
-        } else if (part.inlineData) {
-          const imageData = part.inlineData.data;
-          const buffer = Buffer.from(imageData, "base64");
-          console.log('🎨 GEMINI: Image generated successfully, size:', buffer.length, 'bytes');
-          return buffer;
-        }
-      }
-
-      throw new Error('No image data found in Gemini response');
-
-    } catch (error) {
-      console.error('AI image editing error:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
-      throw new Error(`Failed to edit image: ${error.message}`);
-    }
-  }
-
-  async editImageWithBackground(
-    prompt: string, 
-    inputImage: string, 
-    backgroundImage: string
+  async editImageWithReferenceTemplate(
+    prompt: string,
+    inputImage: string,
+    referenceTemplateImage: string,
+    inputMimeType: string = 'image/jpeg',
+    referenceMimeType: string = 'image/jpeg',
+    logoImage: string,
+    logoMimeType: string = 'image/png',
+    aspectRatio: string = '1:1'
   ): Promise<Buffer> {
     try {
-      console.log('🎨 GEMINI: Starting image editing with background replacement...');
-      
+      console.log('🎨 GEMINI: Starting image editing with reference template...');
+
       // Validate base64 data
       if (!this.isValidBase64(inputImage)) {
         throw new Error('Invalid input image base64 data');
       }
-      if (!this.isValidBase64(backgroundImage)) {
-        throw new Error('Invalid background image base64 data');
+      if (!this.isValidBase64(referenceTemplateImage)) {
+        throw new Error('Invalid reference template image base64 data');
       }
 
-      // Build contents for API with both images
-      const contents = this.buildContentsWithBackground(
-        inputImage, 
-        backgroundImage,
-        `You are given two images: 
-1. The main image (first image) - this is the image that needs to be edited
-2. The background image (second image) - this is the desired background style
-
-Please edit the main image according to the following requirements: ${prompt}
-Then replace the background of the edited main image to match the style and appearance of the background image provided.
-
-Return only ONE final edited image with the new background, no additional text or multiple images.`
-      );
-
-      // 1) Count input tokens first
-      console.log('💰 GEMINI: Counting input tokens...');
-      const { totalTokens = 0 } = await this.genAI.models.countTokens({ 
-        model: "gemini-2.5-flash-image", 
-        contents 
-      });
+      // Check image sizes (base64 is ~33% larger than binary)
+      const inputImageSize = (inputImage.length * 3) / 4;
+      const referenceImageSize = (referenceTemplateImage.length * 3) / 4;
+      const totalSizeMB = (inputImageSize + referenceImageSize) / (1024 * 1024);
       
-      // 2) Estimate cost before making the request
-      const preEstimate = this.estimatePreCost(totalTokens, 1);
-      console.log('💰 GEMINI: Pre-estimate cost:', {
-        inputTokens: preEstimate.inputTokens,
-        inputCostUSD: `$${preEstimate.inputCostUSD.toFixed(6)}`,
-        outputImagesCostUSD: `$${preEstimate.outputImagesCostUSD.toFixed(6)}`,
-        totalUSD: `$${preEstimate.totalUSD.toFixed(6)}`
-      });
+      console.log('📏 GEMINI: Image sizes - Input:', (inputImageSize / (1024 * 1024)).toFixed(2), 'MB, Reference:', (referenceImageSize / (1024 * 1024)).toFixed(2), 'MB, Total:', totalSizeMB.toFixed(2), 'MB');
+      
+      // Warn if images are very large (Gemini API typically has limits around 20MB total)
+      if (totalSizeMB > 15) {
+        console.warn('⚠️ GEMINI: Total image size is very large (' + totalSizeMB.toFixed(2) + 'MB). This may cause API errors.');
+      }
+
+      // Build contents for API with both images - instruction first to ensure AI reads it before processing images
+      const instruction = `Bạn nhận 2 ảnh: 
+        1) Ảnh gốc có khuôn mặt người dùng 
+        2) Ảnh template nền thương hiệu ZAPP
+        3) Ảnh logo thương hiệu ZAPP
+
+        Tạo 1 ảnh mới:
+        - Giữ nguyên y hệt khuôn mặt từ ảnh gốc 100%, không được vẽ khuôn mặt mới.
+        - Giữ nguyên background template.
+        - Đặt người mẫu vào đúng vị trí như ảnh ví dụ: 
+        đứng giữa khung hình, khung từ ngang hông trở lên.
+        - Tạo trang phục/vibe theo phong cách, sẽ có có phong cách cho nam và nữ:  "${prompt}".
+        - Thêm logo “ZAPP” từ ảnh logo thương hiệu ZAPP, ở ngực trái áo, đúng vị trí như ảnh ví dụ.
+
+        Ảnh cuối phải chân thực, sắc nét; luôn ưu tiên giữ khuôn mặt gốc và bố cục/background template.
+        - Nếu có mâu thuẫn, LUÔN ưu tiên giữ khuôn mặt giống Ảnh 1 và phông nền giống Ảnh 2.
+        - Ảnh trả ra có tỷ lệ khung hình là: ${aspectRatio}
+          `;
+
+      const contents = this.buildContentsWithBackground(
+        inputImage,
+        referenceTemplateImage,
+        instruction,
+        logoImage,
+        logoMimeType,
+        inputMimeType,
+        referenceMimeType,
+      );
 
       // 3) Make the API call
       console.log('🎨 GEMINI: Making API call with both images...');
       const response = await this.genAI.models.generateContent({
         model: "gemini-2.5-flash-image",
         contents,
-        config: { responseModalities: ["IMAGE"] }
+        config: { 
+          responseModalities: ["IMAGE"], 
+          imageConfig:{
+            aspectRatio: aspectRatio,
+          }
+         }
       });
-      
+
       if (!response.candidates || response.candidates.length === 0) {
         throw new Error('No response candidates from Gemini API');
       }
-      console.log(response?.text);
-      
 
-      // 4) Get usage metadata and calculate actual cost
-      const usage = (response as any).usageMetadata || {};
-      const candidates = (response as any)?.candidates ?? [];
-      const imagesOutActual = candidates.flatMap((c: any) => c?.content?.parts ?? [])
-        .filter((p: any) => p?.inlineData?.data).length || 1;
-
-      const actualCost = this.calculateActualCost(usage, imagesOutActual);
-      console.log('💰 GEMINI: Actual cost after API call:', {
-        promptTokens: actualCost.promptTokens,
-        outputTokens: actualCost.outputTokens,
-        imagesOut: actualCost.imagesOut,
-        inputCostUSD: `$${actualCost.inputCostUSD.toFixed(6)}`,
-        outputImagesCostUSD: `$${actualCost.outputImagesCostUSD.toFixed(6)}`,
-        outputTextCostUSD: `$${actualCost.outputTextCostUSD.toFixed(6)}`,
-        totalUSD: `$${actualCost.totalUSD.toFixed(6)}`
-      });
 
       const candidate = response.candidates[0];
       if (!candidate.content || !candidate.content.parts) {
@@ -243,8 +149,30 @@ Return only ONE final edited image with the new background, no additional text o
 
     } catch (error) {
       console.error('AI image editing with background error:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
-      throw new Error(`Failed to edit image with background: ${error.message}`);
+      
+      // Log more detailed error information
+      if (error.status) {
+        console.error('API Error Status:', error.status);
+      }
+      if (error.response) {
+        console.error('API Error Response:', JSON.stringify(error.response, null, 2));
+      }
+      if (error.message) {
+        console.error('Error Message:', error.message);
+      }
+      
+      // Check for specific error types
+      if (error.status === 500) {
+        const errorMsg = error.message || 'Internal server error from Gemini API';
+        console.error('⚠️ GEMINI: 500 Internal Server Error - This could be due to:');
+        console.error('  1. Image size too large (check if images exceed API limits)');
+        console.error('  2. Invalid image format or corrupted data');
+        console.error('  3. Temporary API issue - try again later');
+        console.error('  4. Request format issue');
+        throw new Error(`Gemini API Internal Error: ${errorMsg}. Please check image sizes and formats.`);
+      }
+      
+      throw new Error(`Failed to edit image with background: ${error.message || 'Unknown error'}`);
     }
   }
 
@@ -255,7 +183,7 @@ Return only ONE final edited image with the new background, no additional text o
       if (!base64Regex.test(str)) {
         return false;
       }
-      
+
       // Try to decode
       const decoded = Buffer.from(str, 'base64');
       const reencoded = decoded.toString('base64');
@@ -265,28 +193,18 @@ Return only ONE final edited image with the new background, no additional text o
     }
   }
 
-  /**
-   * Build contents for Gemini API
-   */
-  private buildContents(base64Image: string, mime = "image/jpeg", instruction: string) {
-    return [
-      {
-        role: "user",
-        parts: [
-          { inlineData: { mimeType: mime, data: base64Image } },
-          { text: instruction },
-        ],
-      },
-    ];
-  }
+
 
   /**
    * Build contents for Gemini API with both main image and background image
+   * Instruction is placed FIRST so AI reads requirements before processing images
    */
   private buildContentsWithBackground(
-    mainImage: string, 
-    backgroundImage: string, 
+    mainImage: string,
+    backgroundImage: string,
     instruction: string,
+    logoImage: string,
+    logoMimeType: string = 'image/png',
     mainMime = "image/jpeg",
     backgroundMime = "image/jpeg"
   ) {
@@ -294,9 +212,13 @@ Return only ONE final edited image with the new background, no additional text o
       {
         role: "user",
         parts: [
-          { inlineData: { mimeType: mainMime, data: mainImage } },
-          { inlineData: { mimeType: backgroundMime, data: backgroundImage } },
           { text: instruction },
+          { text: "FIRST IMAGE (MAIN PERSON):" },
+          { inlineData: { mimeType: mainMime, data: mainImage } },
+          { text: "SECOND IMAGE (BACKGROUND ONLY):" },
+          { inlineData: { mimeType: backgroundMime, data: backgroundImage } },
+          { text: "THIRD IMAGE (LOGO):" },
+          { inlineData: { mimeType: logoMimeType, data: logoImage } },
         ],
       },
     ];
@@ -308,11 +230,11 @@ Return only ONE final edited image with the new background, no additional text o
   private estimatePreCost(inputTokens: number, imagesOutRequested = 1) {
     const inputCost = (inputTokens / 1000000) * PRICING.INPUT_PER_MTOK_USD;
     const outputImagesCost = imagesOutRequested * PRICING.OUTPUT_IMAGE_PER_UNIT_USD;
-    return { 
-      inputTokens, 
-      inputCostUSD: inputCost, 
-      outputImagesCostUSD: outputImagesCost, 
-      totalUSD: inputCost + outputImagesCost 
+    return {
+      inputTokens,
+      inputCostUSD: inputCost,
+      outputImagesCostUSD: outputImagesCost,
+      totalUSD: inputCost + outputImagesCost
     };
   }
 
@@ -322,7 +244,7 @@ Return only ONE final edited image with the new background, no additional text o
   private calculateActualCost(usage: any, imagesOutActual: number) {
     const promptTok = usage.promptTokenCount ?? 0;
     const outputTok = usage.candidatesTokenCount ?? 0;
-    
+
     const inputCostUSD = (promptTok / 1000000) * PRICING.INPUT_PER_MTOK_USD;
     const outputImagesCostUSD = imagesOutActual * PRICING.OUTPUT_IMAGE_PER_UNIT_USD;
     const outputTextCostUSD = (outputTok / 1000000) * PRICING.OUTPUT_TEXT_PER_MTOK_USD;
@@ -340,24 +262,6 @@ Return only ONE final edited image with the new background, no additional text o
   }
 
 
-  async enhancePrompt(prompt: string): Promise<string> {
-    try {
-      const requestText = `Enhance this image generation prompt to be more detailed and specific: "${prompt}". 
-                            Return only the enhanced prompt, no additional text.`;
-
-      const result = await this.genAI.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: requestText
-      });
-      const response = result.text;
-
-      return response;
-
-    } catch (error) {
-
-      throw new Error(`Failed to enhance prompt: ${error.message}`);
-    }
-  }
 
   /**
    * Get pricing information for Gemini 2.5 Flash Image

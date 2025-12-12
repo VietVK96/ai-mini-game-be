@@ -44,6 +44,7 @@ export class JobsService {
         file: createJobDto.file,
         prompt: createJobDto.prompt,
         templateId: createJobDto.templateId,
+        aspectRatio: createJobDto.aspectRatio,
       });
 
       console.log(`✅ JOBS: Job ${jobId} added to queue with Bull job ID: ${job.id}`);

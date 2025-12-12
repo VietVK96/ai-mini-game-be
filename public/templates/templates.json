@@ -2,11 +2,13 @@
   {
     "id": "1",
     "name": "Vàng cho chất",
-    "backgroundPath": "/templates/vang.png"
+    "backgroundPath": "/templates/vang.png",
+    "overlayPath": "/templates/yellowfull.png"
   },
   {
     "id": "2",
     "name": "Đen cho ngầu",
-    "backgroundPath": "/templates/den.png"
+    "backgroundPath": "/templates/den.png",
+    "overlayPath": "/templates/blackfull.png"
   }
 ]

@@ -27,7 +27,7 @@ export class GenConsumer {
   @Process('generate')
   async handleGenerate(job: Job) {
     console.log(`🔥🔥🔥 CONSUMER TRIGGERED! Job ID: ${job.id}`);  
-    const { jobId, file, prompt, templateId } = job.data;
+    const { jobId, file, prompt, templateId, aspectRatio = '1:1' } = job.data;
     
     try {
       // Update job status
@@ -48,21 +48,16 @@ export class GenConsumer {
       if (!template) {
         throw new Error('Template not found');
       }
-      
-      // Check if template has backgroundPath (not null)
-      const templatePath = template.backgroundPath 
-        ? join(process.cwd(), 'public', template.backgroundPath)
-        : null;
-      
-      if (!templatePath) {
-        throw new Error('Template background path is required');
+
+      if (!template.backgroundPath) {
+        throw new Error('Template backgroundPath is required');
       }
 
       console.log('🎨 CONSUMER: Template info:', {
         id: template.id,
         name: template.name,
-        hasBackground: !!template.backgroundPath,
-        templatePath: templatePath
+        backgroundPath: template.backgroundPath,
+        aspectRatio: aspectRatio
       });
 
       // Convert buffer data back to Buffer if it was serialized
@@ -76,41 +71,58 @@ export class GenConsumer {
         throw new Error('Invalid file buffer format');
       }
 
-      // Read background image from template file
+      // Read reference template image (den.png or vang.png)
       await this.memoryCacheService.updateJobMetadata(jobId, {
         progress: 20,
-        message: 'Đang đọc ảnh background...',
+        message: 'Đang đọc ảnh template reference...',
       });
 
       this.realtimeService.emitJobProgress(jobId, {
         status: 'running',
         progress: 20,
-        message: 'Đang đọc ảnh background...',
+        message: 'Đang đọc ảnh template reference...',
       });
 
-      const backgroundBuffer = await fs.promises.readFile(templatePath);
-      const backgroundBase64 = backgroundBuffer.toString('base64');
-      console.log('🎨 CONSUMER: Background image loaded, size:', backgroundBuffer.length, 'bytes');
+      const referenceTemplatePath = join(process.cwd(), 'public', template.overlayPath);
+      const referenceTemplateBuffer = await fs.promises.readFile(referenceTemplatePath);
+      const referenceTemplateBase64 = referenceTemplateBuffer.toString('base64');
+      
+      
+      const referenceMimeType = this.getMimeType(referenceTemplatePath);
+      const inputMimeType = file.mimetype || 'image/jpeg';
 
-      // AI Image Editing - Chỉnh sửa ảnh chính theo prompt và thay background
+      const LogoPath = join(process.cwd(), 'public', '/templates/Logo_ZAPP.png');
+      const logoBuffer = await fs.promises.readFile(LogoPath);
+      const logoBase64 = logoBuffer.toString('base64');
+      const logoMimeType = this.getMimeType(LogoPath);
+      
+      console.log('🎨 CONSUMER: Reference template loaded, size:', referenceTemplateBuffer.length, 'bytes');
+      console.log('🎨 CONSUMER: MIME types - Input:', inputMimeType, 'Reference:', referenceMimeType);
+
+      // AI Image Editing - Gửi cả ảnh chính và ảnh reference template cho AI
       await this.memoryCacheService.updateJobMetadata(jobId, {
         progress: 40,
-        message: 'AI đang chỉnh sửa ảnh và thay background...',
+        message: 'AI đang tạo ảnh theo template reference...',
       });
 
       this.realtimeService.emitJobProgress(jobId, {
         status: 'running',
         progress: 40,
-        message: 'AI đang chỉnh sửa ảnh và thay background...',
+        message: 'AI đang tạo ảnh theo template reference...',
       });
 
-      // Sử dụng Gemini để chỉnh sửa ảnh chính và thay background
-      const result = await this.geminiService.editImageWithBackground(
+      // Sử dụng Gemini để tạo ảnh giống reference template nhưng với người từ ảnh chính
+      const result = await this.geminiService.editImageWithReferenceTemplate(
         prompt, 
         inputBuffer.toString('base64'),
-        backgroundBase64
+        referenceTemplateBase64,
+        inputMimeType,
+        referenceMimeType,
+        logoBase64,
+        logoMimeType,
+        aspectRatio
       );
-      console.log('🎨 CONSUMER: Image edited with background by Gemini, size:', result.length, 'bytes');
+      console.log('🎨 CONSUMER: Image created with reference template by Gemini, size:', result.length, 'bytes');
 
       // Save result
       await this.memoryCacheService.updateJobMetadata(jobId, {
@@ -165,4 +177,19 @@ export class GenConsumer {
       throw error;
     }
   }
+
+  private readonly getMimeType = (filePath: string): string => {
+    const ext = filePath.toLowerCase().split('.').pop();
+    switch (ext) {
+      case 'png':
+        return 'image/png';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/jpeg';
+    }
+  };
 }

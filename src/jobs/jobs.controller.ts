@@ -37,6 +37,7 @@ export class JobsController {
       file: file,
       prompt: body.prompt || '',
       templateId: body.templateId || '',
+      aspectRatio: body.aspectRatio || '1:1',
     };
 
     return await this.jobsService.createJob(createJobDto);

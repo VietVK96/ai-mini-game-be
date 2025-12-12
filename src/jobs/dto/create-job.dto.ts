@@ -14,4 +14,8 @@ export class CreateJobDto {
   @IsString()
   @IsNotEmpty()
   templateId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  aspectRatio: string;
 }
