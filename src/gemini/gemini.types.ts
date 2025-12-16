@@ -24,3 +24,28 @@ export interface GeminiModelConfig {
   model: string;
   generationConfig?: GeminiGenerationConfig;
 }
+
+export interface EditImageWithReferenceTemplateParams {
+  prompt: string;
+  inputImage: string;
+  backgroundTemplateImage: string;
+  logoImage: string;
+  inputMimeType?: string;
+  backgroundMimeType?: string;
+  logoMimeType?: string;
+  aspectRatio?: string;
+  referenceImage?: string;
+  referenceImageMimeType?: string;
+}
+
+export interface BuildContentsWithBackgroundParams {
+  mainImage: string,
+  backgroundImage: string,
+  instruction: string,
+  logoImage: string,
+  logoMimeType: string,
+  mainMime: string ,
+  backgroundMime: string ,
+  referenceImage?: string,
+  referenceImageMimeType?: string
+}

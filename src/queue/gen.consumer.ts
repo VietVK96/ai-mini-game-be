@@ -83,12 +83,11 @@ export class GenConsumer {
         message: 'Đang đọc ảnh template reference...',
       });
 
-      const referenceTemplatePath = join(process.cwd(), 'public', template.overlayPath);
-      const referenceTemplateBuffer = await fs.promises.readFile(referenceTemplatePath);
-      const referenceTemplateBase64 = referenceTemplateBuffer.toString('base64');
-      
-      
-      const referenceMimeType = this.getMimeType(referenceTemplatePath);
+      const backgroundTemplatePath = join(process.cwd(), 'public', template.overlayPath);
+      const backgroundTemplateBuffer = await fs.promises.readFile(backgroundTemplatePath);
+      const backgroundTemplateBase64 = backgroundTemplateBuffer.toString('base64');
+
+      const backgroundMimeType = this.getMimeType(backgroundTemplatePath);
       const inputMimeType = file.mimetype || 'image/jpeg';
 
       const LogoPath = join(process.cwd(), 'public', '/templates/Logo_ZAPP.png');
@@ -96,8 +95,8 @@ export class GenConsumer {
       const logoBase64 = logoBuffer.toString('base64');
       const logoMimeType = this.getMimeType(LogoPath);
       
-      console.log('🎨 CONSUMER: Reference template loaded, size:', referenceTemplateBuffer.length, 'bytes');
-      console.log('🎨 CONSUMER: MIME types - Input:', inputMimeType, 'Reference:', referenceMimeType);
+      console.log('🎨 CONSUMER: Reference template loaded, size:', backgroundTemplateBuffer.length, 'bytes');
+      console.log('🎨 CONSUMER: MIME types - Input:', inputMimeType, 'Reference:', backgroundMimeType);
 
       // AI Image Editing - Gửi cả ảnh chính và ảnh reference template cho AI
       await this.memoryCacheService.updateJobMetadata(jobId, {
@@ -112,16 +111,18 @@ export class GenConsumer {
       });
 
       // Sử dụng Gemini để tạo ảnh giống reference template nhưng với người từ ảnh chính
-      const result = await this.geminiService.editImageWithReferenceTemplate(
-        prompt, 
-        inputBuffer.toString('base64'),
-        referenceTemplateBase64,
+      const result = await this.geminiService.editImageWithReferenceTemplate({
+        prompt,
+        inputImage: inputBuffer.toString('base64'),
+        backgroundTemplateImage: backgroundTemplateBase64,
+        logoImage: logoBase64,
         inputMimeType,
-        referenceMimeType,
-        logoBase64,
+        backgroundMimeType,
         logoMimeType,
-        aspectRatio
-      );
+        aspectRatio,
+        // referenceImage: referenceImageBase64,
+        // referenceImageMimeType: referenceImageMimeType,
+      });
       console.log('🎨 CONSUMER: Image created with reference template by Gemini, size:', result.length, 'bytes');
 
       // Save result

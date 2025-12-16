@@ -1,9 +1,8 @@
+import { GoogleGenAI } from "@google/genai";
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenAI, Modality } from "@google/genai";
 import { GeminiConfig } from '../config/gemini.interface';
-import { GeminiRequest, GeminiPart } from './gemini.types';
-import * as fs from 'fs';
+import { BuildContentsWithBackgroundParams, EditImageWithReferenceTemplateParams } from './gemini.types';
 
 /** ===== Pricing for Gemini 2.5 Flash Image ===== */
 const PRICING = {
@@ -49,16 +48,22 @@ export class GeminiService {
 
 
 
-  async editImageWithReferenceTemplate(
-    prompt: string,
-    inputImage: string,
-    referenceTemplateImage: string,
-    inputMimeType: string = 'image/jpeg',
-    referenceMimeType: string = 'image/jpeg',
-    logoImage: string,
-    logoMimeType: string = 'image/png',
-    aspectRatio: string = '1:1'
-  ): Promise<Buffer> {
+  public editImageWithReferenceTemplate = async (
+    params: EditImageWithReferenceTemplateParams
+  ): Promise<Buffer> => {
+    const {
+      prompt,
+      inputImage,
+      backgroundTemplateImage,
+      logoImage,
+      inputMimeType = 'image/jpeg',
+      backgroundMimeType = 'image/jpeg',
+      logoMimeType = 'image/png',
+      aspectRatio = '1:1',
+      referenceImage = null,
+      referenceImageMimeType = 'image/jpeg'
+    } = params;
+
     try {
       console.log('🎨 GEMINI: Starting image editing with reference template...');
 
@@ -66,16 +71,16 @@ export class GeminiService {
       if (!this.isValidBase64(inputImage)) {
         throw new Error('Invalid input image base64 data');
       }
-      if (!this.isValidBase64(referenceTemplateImage)) {
+      if (!this.isValidBase64(backgroundTemplateImage)) {
         throw new Error('Invalid reference template image base64 data');
       }
 
       // Check image sizes (base64 is ~33% larger than binary)
       const inputImageSize = (inputImage.length * 3) / 4;
-      const referenceImageSize = (referenceTemplateImage.length * 3) / 4;
-      const totalSizeMB = (inputImageSize + referenceImageSize) / (1024 * 1024);
+      const backgroundTemplateImageSize = (backgroundTemplateImage.length * 3) / 4;
+      const totalSizeMB = (inputImageSize + backgroundTemplateImageSize) / (1024 * 1024);
       
-      console.log('📏 GEMINI: Image sizes - Input:', (inputImageSize / (1024 * 1024)).toFixed(2), 'MB, Reference:', (referenceImageSize / (1024 * 1024)).toFixed(2), 'MB, Total:', totalSizeMB.toFixed(2), 'MB');
+      console.log('📏 GEMINI: Image sizes - Input:', (inputImageSize / (1024 * 1024)).toFixed(2), 'MB, Reference:', (backgroundTemplateImageSize / (1024 * 1024)).toFixed(2), 'MB, Total:', totalSizeMB.toFixed(2), 'MB');
       
       // Warn if images are very large (Gemini API typically has limits around 20MB total)
       if (totalSizeMB > 15) {
@@ -83,32 +88,70 @@ export class GeminiService {
       }
 
       // Build contents for API with both images - instruction first to ensure AI reads it before processing images
-      const instruction = `Bạn nhận 2 ảnh: 
-        1) Ảnh gốc có khuôn mặt người dùng 
-        2) Ảnh template nền thương hiệu ZAPP
-        3) Ảnh logo thương hiệu ZAPP
+      const instruction = `
+      CRITICAL TASK — READ CAREFULLY.
+You are given EXACTLY 3 images:
+- IMAGE 1 (FACE/IDENTITY): the user’s real face/identity reference.
+- IMAGE 2 (ZAPP TEMPLATE BACKGROUND): the fixed final canvas with 4 composition strings/lines/tapes and brand background.
+- IMAGE 3 (ZAPP LOGO): the official “ZAPP” logo (yellow + white, transparent background).
 
-        Tạo 1 ảnh mới:
-        - Giữ nguyên y hệt khuôn mặt từ ảnh gốc 100%, không được vẽ khuôn mặt mới.
-        - Giữ nguyên background template.
-        - Đặt người mẫu vào đúng vị trí như ảnh ví dụ: 
-        đứng giữa khung hình, khung từ ngang hông trở lên.
-        - Tạo trang phục/vibe theo phong cách, sẽ có có phong cách cho nam và nữ:  "${prompt}".
-        - Thêm logo “ZAPP” từ ảnh logo thương hiệu ZAPP, ở ngực trái áo, đúng vị trí như ảnh ví dụ.
+GOAL: Create ONE photorealistic final image by compositing:
+- Keep IMAGE 2 as the base canvas (do NOT change its colors, tapes/strings count, shape, position, blur, or layout).
+- Place the person (from IMAGE 1) into IMAGE 2, centered between the tapes, framed from waist/hip up.
 
-        Ảnh cuối phải chân thực, sắc nét; luôn ưu tiên giữ khuôn mặt gốc và bố cục/background template.
-        - Nếu có mâu thuẫn, LUÔN ưu tiên giữ khuôn mặt giống Ảnh 1 và phông nền giống Ảnh 2.
-        - Ảnh trả ra có tỷ lệ khung hình là: ${aspectRatio}
-          `;
+POSITION (normalized to the template canvas):
+- Subject centered: face center at (x=50%, y=28–32%).
+- Eyes line at y≈28–30%.
+- Waist-up crop: waist/crop line at y≈78–82%.
+- Subject width spans x≈20%..80%.
+- Keep headroom ~6–10% from the top edge.
+Do NOT reposition any template elements to fit the subject. Fit/scale the subject to match the coordinates above.
+
+HARD RULES (MUST FOLLOW):
+1) FACE PRESERVATION (HIGHEST PRIORITY):
+   - The face from IMAGE 1 must remain 100% identical (no redraw, no face swap, no beautify, no stylization).
+   - Preserve facial features, identity, age, skin texture, moles/scars, expression as close as possible.
+
+2) TEMPLATE LOCK + FOREGROUND OCCLUSION (SECOND PRIORITY):
+   - IMAGE 2 must remain unchanged except where the subject overlays it.
+   - The blurred foreground tapes/straps in IMAGE 2 are in FRONT of the subject.
+   - Especially the blurred tape in the bottom-left quadrant must occlude the subject.
+   - Do NOT remove, repaint, reshape, move, retype, or sharpen any tape; preserve their blur exactly.
+
+   Composite order (MUST): template base (back) + subject (middle) + foreground tapes (top).
+
+3) OUTFIT / VIBE:
+   - Change ONLY clothing + styling of the person to match this style:
+     "${prompt}"
+   - Keep the person photorealistic, high-resolution, clean edges, natural lighting consistent with the template.
+
+4) LOGO PLACEMENT:
+   - Use ONLY the logo from IMAGE 3 (do NOT recreate or retype “ZAPP”).
+   - Place it on the left chest of the outfit.
+   - Allowed edits: scale up/down slightly; keep aspect ratio; no distortion/warping/rotation.
+   - If needed for contrast, you may add a subtle outline/shadow, but keep logo colors (yellow/white) and readability.
+
+NEGATIVE CONSTRAINTS:
+- No extra text, no watermarks, no random symbols, no duplicated logos.
+- No blur, no artifacts, no deformed hands/arms, no uncanny face.
+- Do not change the template background or tapes.
+
+OUTPUT:
+- Return ONLY the final image (no explanation text).
+If any conflict occurs, ALWAYS prioritize: (1) face from IMAGE 1, (2) template+tapes from IMAGE 2, (3) logo from IMAGE 3`;
 
       const contents = this.buildContentsWithBackground(
-        inputImage,
-        referenceTemplateImage,
-        instruction,
-        logoImage,
-        logoMimeType,
-        inputMimeType,
-        referenceMimeType,
+        {
+          mainImage: inputImage,
+          backgroundImage: backgroundTemplateImage,
+          instruction: instruction,
+          logoImage: logoImage,
+          logoMimeType: logoMimeType,
+          mainMime: inputMimeType,
+          backgroundMime: backgroundMimeType,
+          // referenceImage: referenceImage,
+          // referenceImageMimeType: referenceImageMimeType,
+        }
       );
 
       // 3) Make the API call
@@ -200,14 +243,19 @@ export class GeminiService {
    * Instruction is placed FIRST so AI reads requirements before processing images
    */
   private buildContentsWithBackground(
-    mainImage: string,
-    backgroundImage: string,
-    instruction: string,
-    logoImage: string,
-    logoMimeType: string = 'image/png',
-    mainMime = "image/jpeg",
-    backgroundMime = "image/jpeg"
+    params: BuildContentsWithBackgroundParams
   ) {
+    const {
+      mainImage,
+      backgroundImage,
+      instruction,
+      logoImage,
+      logoMimeType,
+      mainMime,
+      backgroundMime,
+      referenceImage,
+      referenceImageMimeType,
+    } = params;
     return [
       {
         role: "user",
@@ -219,6 +267,8 @@ export class GeminiService {
           { inlineData: { mimeType: backgroundMime, data: backgroundImage } },
           { text: "THIRD IMAGE (LOGO):" },
           { inlineData: { mimeType: logoMimeType, data: logoImage } },
+          // { text: "FOURTH IMAGE (REFERENCE):" },
+          // { inlineData: { mimeType: referenceImageMimeType, data: referenceImage } },
         ],
       },
     ];
