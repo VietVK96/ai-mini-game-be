@@ -1,8 +1,7 @@
 {
   "watch": [
     "src",
-    "public",
-    "templates"
+    "public/templates"
   ],
   "ext": "ts,js,json",
   "ignore": [
@@ -10,7 +9,10 @@
     "src/**/*.test.ts",
     "node_modules",
     "dist",
-    "coverage"
+    "coverage",
+    "public/shares/**",
+    "public/shares/**/*",
+    "**/public/shares/**"
   ],
   "exec": "nest start",
   "env": {

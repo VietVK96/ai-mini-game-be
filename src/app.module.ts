@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { JobsModule } from './jobs/jobs.module';
 import { TemplatesModule } from './templates/templates.module';
 import { MemoryCacheModule } from './memory-cache/memory-cache.module';
@@ -9,15 +10,20 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { GeminiModule } from './gemini/gemini.module';
 import { ImageModule } from './image/image.module';
 import { QueueModule } from './queue/queue.module';
+import { ShareModule } from './share/share.module';
 import { geminiConfig } from './config/gemini.config';
+import { appConfig } from './config/app.config';
 
 @Module({
   imports: [
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [geminiConfig],
+      load: [geminiConfig, appConfig],
     }),
+    
+    // Schedule module for cron jobs
+    ScheduleModule.forRoot(),
     
     // Rate limiting
     ThrottlerModule.forRoot([{
@@ -49,6 +55,7 @@ import { geminiConfig } from './config/gemini.config';
     GeminiModule,
     ImageModule,
     QueueModule,
+    ShareModule,
   ],
 })
 export class AppModule {}

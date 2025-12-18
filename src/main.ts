@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 
 async function bootstrap() {
   console.log('🚀 MAIN: Starting application...');
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   console.log('🚀 MAIN: AppModule created');
   
   // Global validation pipe
@@ -39,8 +41,21 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
-  // Global prefix
-  app.setGlobalPrefix('api/v1');
+  // Serve static files from public directory
+  app.useStaticAssets(join(process.cwd(), 'public'), {
+    prefix: '/',
+    setHeaders: (res, path) => {
+      // Set cache headers for images in shares directory
+      if (path.includes('/shares/') && (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png'))) {
+        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+      }
+    },
+  });
+
+  // Global prefix - exclude share page routes
+  app.setGlobalPrefix('api/v1', {
+    exclude: ['/s/(.*)'], // Exclude share page routes from prefix (pattern matching)
+  });
 
   const port = parseInt(process.env.API_PORT || '3001', 10);
   await app.listen(port,'0.0.0.0');
