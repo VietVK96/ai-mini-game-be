@@ -29,11 +29,14 @@ export interface EditImageWithReferenceTemplateParams {
   prompt: string;
   inputImage: string;
   backgroundTemplateImage: string;
-  logoImage: string;
+  maleOutfitImage: string;
+  femaleOutfitImage: string;
   inputMimeType?: string;
   backgroundMimeType?: string;
-  logoMimeType?: string;
+  maleOutfitMimeType?: string;
+  femaleOutfitMimeType?: string;
   aspectRatio?: string;
+  style?: string;
   referenceImage?: string;
   referenceImageMimeType?: string;
 }
@@ -42,8 +45,10 @@ export interface BuildContentsWithBackgroundParams {
   mainImage: string,
   backgroundImage: string,
   instruction: string,
-  logoImage: string,
-  logoMimeType: string,
+  maleOutfitImage: string,
+  femaleOutfitImage: string,
+  maleOutfitMimeType: string,
+  femaleOutfitMimeType: string,
   mainMime: string ,
   backgroundMime: string ,
   referenceImage?: string,

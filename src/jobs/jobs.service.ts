@@ -36,6 +36,7 @@ export class JobsService {
         jobId,
         prompt: createJobDto.prompt,
         templateId: createJobDto.templateId,
+        style: createJobDto.style,
         hasFile: !!createJobDto.file
       });
       
@@ -45,6 +46,7 @@ export class JobsService {
         prompt: createJobDto.prompt,
         templateId: createJobDto.templateId,
         aspectRatio: createJobDto.aspectRatio,
+        style: createJobDto.style || 'cool_ngau',
       });
 
       console.log(`✅ JOBS: Job ${jobId} added to queue with Bull job ID: ${job.id}`);

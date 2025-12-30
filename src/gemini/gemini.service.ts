@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GeminiConfig } from '../config/gemini.interface';
 import { BuildContentsWithBackgroundParams, EditImageWithReferenceTemplateParams } from './gemini.types';
+import { Style } from "src/jobs/dto/create-job.dto";
 
 /** ===== Pricing for Gemini 2.5 Flash Image ===== */
 const PRICING = {
@@ -55,11 +56,14 @@ export class GeminiService {
       prompt,
       inputImage,
       backgroundTemplateImage,
-      logoImage,
+      maleOutfitImage,
+      femaleOutfitImage,
       inputMimeType = 'image/jpeg',
       backgroundMimeType = 'image/jpeg',
-      logoMimeType = 'image/png',
+      maleOutfitMimeType = 'image/png',
+      femaleOutfitMimeType = 'image/png',
       aspectRatio = '1:1',
+      style = 'cool_ngau',
       referenceImage = null,
       referenceImageMimeType = 'image/jpeg'
     } = params;
@@ -74,13 +78,21 @@ export class GeminiService {
       if (!this.isValidBase64(backgroundTemplateImage)) {
         throw new Error('Invalid reference template image base64 data');
       }
+      if (!this.isValidBase64(maleOutfitImage)) {
+        throw new Error('Invalid male outfit image base64 data');
+      }
+      if (!this.isValidBase64(femaleOutfitImage)) {
+        throw new Error('Invalid female outfit image base64 data');
+      }
 
       // Check image sizes (base64 is ~33% larger than binary)
       const inputImageSize = (inputImage.length * 3) / 4;
       const backgroundTemplateImageSize = (backgroundTemplateImage.length * 3) / 4;
-      const totalSizeMB = (inputImageSize + backgroundTemplateImageSize) / (1024 * 1024);
+      const maleOutfitImageSize = (maleOutfitImage.length * 3) / 4;
+      const femaleOutfitImageSize = (femaleOutfitImage.length * 3) / 4;
+      const totalSizeMB = (inputImageSize + backgroundTemplateImageSize + maleOutfitImageSize + femaleOutfitImageSize) / (1024 * 1024);
       
-      console.log('📏 GEMINI: Image sizes - Input:', (inputImageSize / (1024 * 1024)).toFixed(2), 'MB, Reference:', (backgroundTemplateImageSize / (1024 * 1024)).toFixed(2), 'MB, Total:', totalSizeMB.toFixed(2), 'MB');
+      console.log('📏 GEMINI: Image sizes - Input:', (inputImageSize / (1024 * 1024)).toFixed(2), 'MB, Background:', (backgroundTemplateImageSize / (1024 * 1024)).toFixed(2), 'MB, Male Outfit:', (maleOutfitImageSize / (1024 * 1024)).toFixed(2), 'MB, Female Outfit:', (femaleOutfitImageSize / (1024 * 1024)).toFixed(2), 'MB, Total:', totalSizeMB.toFixed(2), 'MB');
       
       // Warn if images are very large (Gemini API typically has limits around 20MB total)
       if (totalSizeMB > 15) {
@@ -89,64 +101,198 @@ export class GeminiService {
 
       // Build contents for API with both images - instruction first to ensure AI reads it before processing images
       const instruction = `
-      CRITICAL TASK — READ CAREFULLY.
-You are given EXACTLY 3 images:
-- IMAGE 1 (FACE/IDENTITY): the user’s real face/identity reference.
-- IMAGE 2 (ZAPP TEMPLATE BACKGROUND): the fixed final canvas with 4 composition strings/lines/tapes and brand background.
-- IMAGE 3 (ZAPP LOGO): the official “ZAPP” logo (yellow + white, transparent background).
+      VAI TRÒ
+      Bạn là một chuyên gia ghép ảnh chuyên nghiệp (giống như Photoshop layer compositing).
+      Nhiệm vụ của bạn là CHỈ GHÉP ẢNH (ALPHA COMPOSITING) — đặt một ảnh lên trên ảnh khác.
+      Bạn KHÔNG ĐƯỢC tạo mới, vẽ lại, inpaint, hoặc tưởng tượng các phần tử hình ảnh mới.
+      Bạn KHÔNG ĐƯỢC chỉnh sửa background layer (ẢNH thứ hai) bằng bất kỳ cách nào.
 
-GOAL: Create ONE photorealistic final image by compositing:
-- Keep IMAGE 2 as the base canvas (do NOT change its colors, tapes/strings count, shape, position, blur, or layout).
-- Place the person (from IMAGE 1) into IMAGE 2, centered between the tapes, framed from waist/hip up.
 
-POSITION (normalized to the template canvas):
-- Subject centered: face center at (x=50%, y=28–32%).
-- Eyes line at y≈28–30%.
-- Waist-up crop: waist/crop line at y≈78–82%.
-- Subject width spans x≈20%..80%.
-- Keep headroom ~6–10% from the top edge.
-Do NOT reposition any template elements to fit the subject. Fit/scale the subject to match the coordinates above.
+      ==================================================
+      VAI TRÒ CỦA CÁC ẢNH (CỐ ĐỊNH — KHÔNG ĐƯỢC NHẦM LẪN)
 
-HARD RULES (MUST FOLLOW):
-1) FACE PRESERVATION (HIGHEST PRIORITY):
-   - The face from IMAGE 1 must remain 100% identical (no redraw, no face swap, no beautify, no stylization).
-   - Preserve facial features, identity, age, skin texture, moles/scars, expression as close as possible.
+      ẢNH 1 — NGUỒN KHUÔN MẶT / NHẬN DẠNG
+      - Người thật để tham chiếu.
+      - CHỈ sử dụng để trích xuất người.
+      - Xóa hoàn toàn background, logo, watermark của ẢNH 1.
 
-2) TEMPLATE LOCK + FOREGROUND OCCLUSION (SECOND PRIORITY):
-   - IMAGE 2 must remain unchanged except where the subject overlays it.
-   - The blurred foreground tapes/straps in IMAGE 2 are in FRONT of the subject.
-   - Especially the blurred tape in the bottom-left quadrant must occlude the subject.
-   - Do NOT remove, repaint, reshape, move, retype, or sharpen any tape; preserve their blur exactly.
+      ẢNH thứ hai — TEMPLATE ZAPP (CANVAS CUỐI CÙNG)
+      - Background có brand với bốn dây màu vàng.
+      - Đây là CANVAS CUỐI CÙNG và phải giữ nguyên pixel-identical số lượng, màu sắc, chữ.
 
-   Composite order (MUST): template base (back) + subject (middle) + foreground tapes (top).
+      ẢNH 3 — THAM CHIẾU TRANG PHỤC NAM
+      - Tham chiếu thiết kế trang phục cho người nam.
+      - Giữ nguyên logo ZAPP trên áo.
 
-3) OUTFIT / VIBE:
-   - Change ONLY clothing + styling of the person to match this style:
-     "${prompt}"
-   - Keep the person photorealistic, high-resolution, clean edges, natural lighting consistent with the template.
+      ẢNH 4 — THAM CHIẾU TRANG PHỤC NỮ
+      - Tham chiếu thiết kế trang phục cho người nữ.
+      - Giữ nguyên logo ZAPP trên áo.
 
-4) LOGO PLACEMENT:
-   - Use ONLY the logo from IMAGE 3 (do NOT recreate or retype “ZAPP”).
-   - Place it on the left chest of the outfit.
-   - Allowed edits: scale up/down slightly; keep aspect ratio; no distortion/warping/rotation.
-   - If needed for contrast, you may add a subtle outline/shadow, but keep logo colors (yellow/white) and readability.
 
-NEGATIVE CONSTRAINTS:
-- No extra text, no watermarks, no random symbols, no duplicated logos.
-- No blur, no artifacts, no deformed hands/arms, no uncanny face.
-- Do not change the template background or tapes.
+      ==================================================
+      MỤC TIÊU
 
-OUTPUT:
-- Return ONLY the final image (no explanation text).
-If any conflict occurs, ALWAYS prioritize: (1) face from IMAGE 1, (2) template+tapes from IMAGE 2, (3) logo from IMAGE 3`;
+      Tạo MỘT ảnh cuối cùng chân thực bằng cách CHỈ GHÉP ẢNH (KHÔNG TẠO MỚI):
+
+      QUY TRÌNH GHÉP ẢNH:
+      1. Sử dụng ẢNH thứ hai làm background layer BỊ KHÓA (không chỉnh sửa),
+      2. Trích xuất người từ ẢNH 1 (xóa background, chỉ giữ lại người từ vùng eo trở lên),
+      3. Áp dụng trang phục đúng từ ẢNH 3 hoặc ẢNH 4 (chọn dựa trên giới tính), trang phục,phụ kiện phải khớp với cơ thể,
+      4. Đặt chủ thể (subject) tại tọa độ đã chỉ định trên ẢNH thứ hai,
+      5. cân đối tỷ lệ khuôn mặt và cơ thể,
+      6. Xử lý độ sâu/che khuất: 2 dây là foreground (trên subject), 2 dây là background (sau subject),
+
+      KẾT QUẢ:
+      - Ảnh cuối = ẢNH thứ hai (không đổi) + Chủ thể (đặt trên với trang phục đúng và khớp với cơ thể)
+      - TẤT CẢ các phần tử từ ẢNH thứ hai phải hiển thị và không được phép thay đổi trong ảnh cuối.
+
+
+      ==================================================
+      VỊ TRÍ (TUYỆT ĐỐI — CHỈ SỐ)
+
+      QUAN TRỌNG: Chỉ di chuyển SUBJECT. KHÔNG ĐƯỢC động vào ẢNH thứ hai.
+
+      YÊU CẦU KHUNG HÌNH — CHÂN DUNG TỪ HÔNG TRỞ LÊN:
+      - Ảnh cuối BẮT BUỘC phải là CHÂN DUNG TỪ HÔNG TRỞ LÊN (từ hông/eo trở lên tối đa 2/3 cơ thể).
+      - Crop/khung hình subject sao cho CẠNH DƯỚI ở mức HÔNG hoặc EO.
+      - KHÔNG ĐƯỢC hiển thị full body, chân, hoặc phần dưới hông.
+      - Chỉ hiển thị: đầu, vai, phần thân trên, và vùng hông/eo loại bỏ chân.
+      - Subject phải xuất hiện như chân dung nửa người giống như ảnh chân dung chuyên nghiệp.
+
+      Tọa độ được chuẩn hóa theo canvas ẢNH thứ hai (100% chiều rộng × 100% chiều cao).
+
+      ĐỊNH VỊ SUBJECT (CHỈ SUBJECT DI CHUYỂN):
+      - Tâm khuôn mặt: x = 48–50%, y = 27–29% (ĐIỂM NEO CỐ ĐỊNH)
+      - Đường mắt: y ≈ 25–26%
+      - Đường vai: y ≈ 46–50%
+      - Đường crop hông/eo: y ≈ 78–85% (CẠNH DƯỚI của subject, nơi cơ thể bị cắt)
+      - Chiều rộng body subject: x ≈ 19% → 79%
+      - Khoảng trống phía trên: ~7–9%
+      - Chủ thể ở chính giữa khung hình.
+
+      QUY TẮC NGHIÊM NGẶT:
+      - Chỉ scale, xoay, hoặc đặt vị trí SUBJECT (từ ẢNH 1) để khớp với các tọa độ này.
+      - Crop subject tại mức hông/eo — KHÔNG ĐƯỢC bao gồm chân hoặc full body.
+      - Khung hình subject như CHÂN DUNG TỪ HÔNG TRỞ LÊN, giống như ảnh chân dung chuyên nghiệp.
+      - KHÔNG ĐƯỢC di chuyển, thay đổi kích thước, đặt lại vị trí, hoặc chỉnh sửa BẤT KỲ phần tử nào từ ẢNH thứ hai.
+      - Các phần tử ẢNH thứ hai (màu background, dây, text) giữ nguyên VỊ TRÍ CHÍNH XÁC ban đầu.
+      - Nếu subject cần fit, điều chỉnh kích thước/vị trí SUBJECT, KHÔNG phải background.
+      - Phần dưới của subject (hông/eo) nên ở gần phần dưới canvas, để lại khoảng trống tối thiểu phía dưới.
+
+      QUY TẮC ĐIỂM NEO (KHÔNG ĐƯỢC LỆCH)
+      - Tâm khuôn mặt là ĐIỂM NEO CỐ ĐỊNH — PHẢI ở x = 48–50%, y = 27–29%.
+      - Tất cả tính toán định vị bắt đầu từ điểm neo này.
+      - Thay đổi pose CHỈ được phép bằng cách điều chỉnh vai, tay, hoặc nghiêng đầu.
+      - Điểm neo (tâm khuôn mặt) KHÔNG DI CHUYỂN.
+
+      ==================================================
+      QUY TẮC CỨNG — THỨ TỰ ƯU TIÊN (NGHIÊM NGẶT)
+
+      --------------------------------------------------
+      1) BẢO TOÀN KHUÔN MẶT (ƯU TIÊN CAO NHẤT)
+
+      - Khuôn mặt từ ẢNH 1 phải giữ nguyên 100%,
+      - Không vẽ lại, không swap mặt,
+      - Giữ nguyên các đặc điểm khuôn mặt, tuổi tác, kết cấu da, nốt ruồi, sẹo,
+      - Biểu cảm khuôn mặt CHỈ có thể thay đổi qua input POSE + EXPRESSION,
+
+
+      --------------------------------------------------
+      2) BẤT BIẾN TEMPLATE (ƯU TIÊN THỨ HAI)
+
+      QUAN TRỌNG: ẢNH thứ hai LÀ BACKGROUND LAYER — KHÔNG ĐƯỢC CHỈNH SỬA
+
+      TEMPLATE (ẢNH số 2) — BACKGROUND BỊ KHÓA:
+      - ẢNH thứ hai phải giữ nguyên không đổi.
+      - KHÔNG được chỉnh sửa: KHÔNG TÁI TẠO, KHÔNG VẼ LẠI, KHÔNG SỬA MÀU, KHÔNG CHỈNH SỬA, KHÔNG THAY ĐỔI.
+      - NHIỆM VỤ DUY NHẤT: đặt subject đã trích xuất từ ẢNH 1 LÊN TRÊN ẢNH thứ hai bằng ghép alpha.
+      - Nghĩ như thao tác PHOTOSHOP LAYER: ẢNH thứ hai = hình nền layer bị khóa, subject = layer mới ở trên.
+
+      DÂY/STRIP/RIBBON — TÀI SẢN BRAND TUYỆT ĐỐI (KHÔNG DUNG THỨ):
+      - Số lượng dây trong ảnh cuối PHẢI KHỚP CHÍNH XÁC với 4 dây
+      - Subject được đặt sau 1 dây ở góc dưới-trái và 1 dọc góc trên bên phải, và chủ thể được đặt trước 2 dây chéo còn lại.
+      - MỌI dây trong ẢNH thứ hai phải xuất hiện trong ảnh cuối:
+        • CHÍNH XÁC cùng số lượng 4 dây
+        • CHÍNH XÁC cùng nội dung text
+        • CHÍNH XÁC cùng vị trí (tọa độ x, y)
+        • CHÍNH XÁC cùng kích thước/độ dày
+        • CHÍNH XÁC cùng góc/độ xoay
+        • CHÍNH XÁC cùng mức blur
+        • CHÍNH XÁC cùng opacity
+        • CHÍNH XÁC cùng màu
+      - Không được tạo, nhân đôi, kéo dài, uốn cong, làm méo, xóa, ẩn, hoặc tưởng tượng bất kỳ dây/strap/line nào.
+      - Không được di chuyển hoặc đặt lại vị trí bất kỳ dây nào.
+      - Nếu ảnh cuối có số lượng dây khác với ẢNH thứ hai, kết quả HOÀN TOÀN KHÔNG HỢP LỆ.
+
+      ĐỘ SÂU BẰNG BLUR (CHỈ CHE KHUẤT — KHÔNG CHỈNH SỬA):
+      - CHỈ 2 dây bị blur nặng này là FOREGROUND: Dây chéo lớn bị blur góc dưới-trái và Dây dọc lớn bị blur góc bên phải ở TRÊN subject
+      - 2 dây chéo sắc nét khác là BACKGROUND và phải ở SAU subject.
+      - Subject KHÔNG ĐƯỢC đặt sau mọi dây.
+
+      VÙNG AN TOÀN KHUÔN MẶT:
+      - Không dây nào được che mắt, mũi, hoặc miệng.
+
+      --------------------------------------------------
+      3) CHỌN TRANG PHỤC — NHẬN BIẾT GIỚI TÍNH (ƯU TIÊN THỨ BA)
+
+      BƯỚC 1 — Xác định giới tính từ ẢNH 1:
+      - Phân tích khuôn mặt, tóc, cấu trúc cơ thể, và tổng thể ngoại hình.
+      - Phân loại là NAM hoặc NỮ.
+
+      BƯỚC 2 — Chọn trang phục:
+      - Nếu NAM → CHỈ sử dụng ẢNH 3.
+      - Nếu NỮ → CHỈ sử dụng ẢNH 4.
+
+      QUY TẮC TRANG PHỤC NGHIÊM NGẶT:
+      - Phóng to hoặc thu nhỏ trang phục để khớp với cơ thể.
+      - thay đổi cả kích thước và vị trí của phụ kiện như mũ để khớp với đầu, vòng tay để khớp với tay, túi xách và dây quai để khớp với dáng pose
+      - thay đổi trang phục theo pose dáng
+      - KHÔNG ĐƯỢC trộn các phần tử trang phục nam và nữ.
+      - KHÔNG ĐƯỢC giải thích lại trang phục như unisex.
+      - KHÔNG ĐƯỢC suy luận trang phục từ text.
+
+      ÁP DỤNG TRANG PHỤC:
+      - Sao chép CHÍNH XÁC thiết kế trang phục:
+        áo khoác/áo trên, kiểu phần dưới, tỷ lệ, màu sắc, chất liệu, dây đai, chi tiết và logo.
+      - Kiểu phần dưới phải khớp với tham chiếu.
+      - Bỏ qua background, ánh sáng, pose, camera từ ảnh trang phục.
+
+      --------------------------------------------------
+      4) POSE + BIỂU CẢM (ƯU TIÊN THẤP)
+
+      Áp dụng input này CHÍNH XÁC:
+      ${prompt}
+      - Áp dụng BIỂU CẢM trước, sau đó POSE.
+      - Bỏ qua mọi hướng dẫn về trang phục, màu sắc, ánh sáng, camera, hoặc background.
+      - Nếu pose xung đột với quy tắc POSITION, ANCHOR, hoặc TAPE: giữ các quy tắc đó và điều chỉnh pose tối thiểu.
+      - Chỉ lấy từ hông trở lên để áp dụng pose.
+
+      ==================================================
+      RÀNG BUỘC PHỦ ĐỊNH
+      - Không text hoặc watermark thêm
+      - Không logo bị nhân đôi hoặc méo
+      - Không có hiện tượng mờ nhòe hoặc quầng sáng
+      - Không tay hoặc cánh tay bị biến dạng
+      - Không bóng, mảnh vỡ, hoặc mảnh dây thêm
+      - Không có băng dính được dán rối hoặc lộn xộn.
+      - Không tăng số lượng hay giảm số lượng băng dính, dây chỉ được 4 dây.
+      - Không có bố cục phẳng.
+      - Không có phông nền lộn xộn.
+      ==================================================
+      ĐẦU RA
+      - CHỈ trả về ảnh cuối cùng
+      - Không giải thích text
+      `;
 
       const contents = this.buildContentsWithBackground(
         {
           mainImage: inputImage,
           backgroundImage: backgroundTemplateImage,
           instruction: instruction,
-          logoImage: logoImage,
-          logoMimeType: logoMimeType,
+          maleOutfitImage: maleOutfitImage,
+          femaleOutfitImage: femaleOutfitImage,
+          maleOutfitMimeType: maleOutfitMimeType,
+          femaleOutfitMimeType: femaleOutfitMimeType,
           mainMime: inputMimeType,
           backgroundMime: backgroundMimeType,
           // referenceImage: referenceImage,
@@ -163,8 +309,12 @@ If any conflict occurs, ALWAYS prioritize: (1) face from IMAGE 1, (2) template+t
           responseModalities: ["IMAGE"], 
           imageConfig:{
             aspectRatio: aspectRatio,
-          }
-         }
+          },
+          temperature: 0.8,
+          topK: 15,
+          topP: 0.8,
+          candidateCount: 1,
+         },
       });
 
       if (!response.candidates || response.candidates.length === 0) {
@@ -249,8 +399,10 @@ If any conflict occurs, ALWAYS prioritize: (1) face from IMAGE 1, (2) template+t
       mainImage,
       backgroundImage,
       instruction,
-      logoImage,
-      logoMimeType,
+      maleOutfitImage,
+      femaleOutfitImage,
+      maleOutfitMimeType,
+      femaleOutfitMimeType,
       mainMime,
       backgroundMime,
       referenceImage,
@@ -265,9 +417,11 @@ If any conflict occurs, ALWAYS prioritize: (1) face from IMAGE 1, (2) template+t
           { inlineData: { mimeType: mainMime, data: mainImage } },
           { text: "SECOND IMAGE (BACKGROUND ONLY):" },
           { inlineData: { mimeType: backgroundMime, data: backgroundImage } },
-          { text: "THIRD IMAGE (LOGO):" },
-          { inlineData: { mimeType: logoMimeType, data: logoImage } },
-          // { text: "FOURTH IMAGE (REFERENCE):" },
+          { text: "THIRD IMAGE (MALE OUTFIT REFERENCE):" },
+          { inlineData: { mimeType: maleOutfitMimeType, data: maleOutfitImage } },
+          { text: "FOURTH IMAGE (FEMALE OUTFIT REFERENCE):" },
+          { inlineData: { mimeType: femaleOutfitMimeType, data: femaleOutfitImage } },
+          // { text: "FIFTH IMAGE (REFERENCE):" },
           // { inlineData: { mimeType: referenceImageMimeType, data: referenceImage } },
         ],
       },

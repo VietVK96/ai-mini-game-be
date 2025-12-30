@@ -38,6 +38,7 @@ export class JobsController {
       prompt: body.prompt || '',
       templateId: body.templateId || '',
       aspectRatio: body.aspectRatio || '1:1',
+      style: body.style || 'cool_ngau',
     };
 
     return await this.jobsService.createJob(createJobDto);

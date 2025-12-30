@@ -46,8 +46,15 @@ async function bootstrap() {
     prefix: '/',
     setHeaders: (res, path) => {
       // Set cache headers for images in shares directory
-      if (path.includes('/shares/') && (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png'))) {
-        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+      if (path.includes('/shares/')) {
+        if (path.endsWith('_og.jpg') || path.endsWith('_og.jpeg')) {
+          // OG images: longer cache but with revalidation for Facebook
+          res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate'); // 1 hour
+          res.setHeader('Content-Type', 'image/jpeg');
+        } else if (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png')) {
+          // Original images: shorter cache
+          res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+        }
       }
     },
   });

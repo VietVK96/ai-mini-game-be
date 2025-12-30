@@ -4,8 +4,27 @@ import { MemoryCacheService } from '../memory-cache/memory-cache.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { TemplatesService } from 'src/templates/templates.service';
+import { Style } from 'src/jobs/dto/create-job.dto';
 import * as fs from 'fs';
 import { join } from 'path';
+
+/**
+ * Map style enum or string to outfit filenames (Male and Female)
+ * Format: style enum/string -> { male: PascalCaseNam.png, female: PascalCaseNu.png }
+ */
+function getOutfitFileNames(style: Style | string): { male: string; female: string } {
+  // Convert style to string to handle both enum and string values
+  const styleStr = String(style);
+  const styleMap: Record<string, { male: string; female: string }> = {
+    [Style.COOL_NGAU]: { male: 'CoolNgauNam.png', female: 'CoolNgauNu.png' },
+    [Style.NGHIEM_TUK]: { male: 'NghiemTukNam.png', female: 'NghiemTukNu.png' },
+    [Style.HUONG_NGOAI]: { male: 'HuongNgoaiNam.png', female: 'HuongNgoaiNu.png' },
+    [Style.CHILL_GUY]: { male: 'ChillGuyNam.png', female: 'ChillGuyNu.png' },
+    [Style.FASHION]: { male: 'FashionNam.png', female: 'FashionNu.png' },
+    [Style.BEO_XINH]: { male: 'BeoXinhNam.png', female: 'BeoXinhNu.png' },
+  };
+  return styleMap[styleStr] || styleMap[Style.COOL_NGAU];
+}
 
 @Processor('gen')
 export class GenConsumer {
@@ -27,7 +46,7 @@ export class GenConsumer {
   @Process('generate')
   async handleGenerate(job: Job) {
     console.log(`🔥🔥🔥 CONSUMER TRIGGERED! Job ID: ${job.id}`);  
-    const { jobId, file, prompt, templateId, aspectRatio = '1:1' } = job.data;
+    const { jobId, file, prompt, templateId, aspectRatio = '1:1', style = 'cool_ngau' } = job.data;
     
     try {
       // Update job status
@@ -90,10 +109,47 @@ export class GenConsumer {
       const backgroundMimeType = this.getMimeType(backgroundTemplatePath);
       const inputMimeType = file.mimetype || 'image/jpeg';
 
-      const LogoPath = join(process.cwd(), 'public', '/templates/Logo_ZAPP.png');
-      const logoBuffer = await fs.promises.readFile(LogoPath);
-      const logoBase64 = logoBuffer.toString('base64');
-      const logoMimeType = this.getMimeType(LogoPath);
+      // Read both male and female outfit images based on style (outfit already includes logo)
+      const outfitFileNames = getOutfitFileNames(style);
+      const maleOutfitPath = join(process.cwd(), 'public', 'templates', 'outfit', outfitFileNames.male);
+      const femaleOutfitPath = join(process.cwd(), 'public', 'templates', 'outfit', outfitFileNames.female);
+      
+      let maleOutfitBuffer: Buffer;
+      let maleOutfitBase64: string;
+      let maleOutfitMimeType: string;
+      let femaleOutfitBuffer: Buffer;
+      let femaleOutfitBase64: string;
+      let femaleOutfitMimeType: string;
+      
+      try {
+        // Read male outfit
+        maleOutfitBuffer = await fs.promises.readFile(maleOutfitPath);
+        maleOutfitBase64 = maleOutfitBuffer.toString('base64');
+        maleOutfitMimeType = this.getMimeType(maleOutfitPath);
+        console.log('👕 CONSUMER: Male outfit image loaded:', outfitFileNames.male, 'size:', maleOutfitBuffer.length, 'bytes');
+      } catch (error) {
+        console.warn(`⚠️ CONSUMER: Male outfit image not found for style ${style} (${outfitFileNames.male}), using default cool_ngau`);
+        // Fallback to cool_ngau if outfit not found
+        const defaultMaleOutfitPath = join(process.cwd(), 'public', 'templates', 'outfit', 'CoolNgauNam.png');
+        maleOutfitBuffer = await fs.promises.readFile(defaultMaleOutfitPath);
+        maleOutfitBase64 = maleOutfitBuffer.toString('base64');
+        maleOutfitMimeType = this.getMimeType(defaultMaleOutfitPath);
+      }
+      
+      try {
+        // Read female outfit
+        femaleOutfitBuffer = await fs.promises.readFile(femaleOutfitPath);
+        femaleOutfitBase64 = femaleOutfitBuffer.toString('base64');
+        femaleOutfitMimeType = this.getMimeType(femaleOutfitPath);
+        console.log('👕 CONSUMER: Female outfit image loaded:', outfitFileNames.female, 'size:', femaleOutfitBuffer.length, 'bytes');
+      } catch (error) {
+        console.warn(`⚠️ CONSUMER: Female outfit image not found for style ${style} (${outfitFileNames.female}), using default cool_ngau`);
+        // Fallback to cool_ngau if outfit not found
+        const defaultFemaleOutfitPath = join(process.cwd(), 'public', 'templates', 'outfit', 'CoolNgauNu.png');
+        femaleOutfitBuffer = await fs.promises.readFile(defaultFemaleOutfitPath);
+        femaleOutfitBase64 = femaleOutfitBuffer.toString('base64');
+        femaleOutfitMimeType = this.getMimeType(defaultFemaleOutfitPath);
+      }
       
       console.log('🎨 CONSUMER: Reference template loaded, size:', backgroundTemplateBuffer.length, 'bytes');
       console.log('🎨 CONSUMER: MIME types - Input:', inputMimeType, 'Reference:', backgroundMimeType);
@@ -115,11 +171,14 @@ export class GenConsumer {
         prompt,
         inputImage: inputBuffer.toString('base64'),
         backgroundTemplateImage: backgroundTemplateBase64,
-        logoImage: logoBase64,
+        maleOutfitImage: maleOutfitBase64,
+        femaleOutfitImage: femaleOutfitBase64,
         inputMimeType,
         backgroundMimeType,
-        logoMimeType,
+        maleOutfitMimeType,
+        femaleOutfitMimeType,
         aspectRatio,
+        style,
         // referenceImage: referenceImageBase64,
         // referenceImageMimeType: referenceImageMimeType,
       });
