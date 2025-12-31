@@ -10,35 +10,44 @@ import { GeminiService } from 'src/gemini/gemini.service';
 
 @Injectable()
 export class JobsService {
+  private eventListenersInitialized = false;
+
   constructor(
     @InjectQueue('gen') private genQueue: Queue,
     private memoryCacheService: MemoryCacheService,
     private realtimeService: RealtimeService,
     private geminiService: GeminiService,
-  ) {}
+  ) {
+    // Initialize event listeners only once in constructor
+    this.initializeQueueEventListeners();
+  }
+
+  private initializeQueueEventListeners(): void {
+    if (this.eventListenersInitialized) {
+      return;
+    }
+
+    this.genQueue.on('completed', (job, result) => {
+      console.log(`🎉 QUEUE EVENT: Job ${job.id} completed with result:`, result);
+    });
+    
+    this.genQueue.on('failed', (job, err) => {
+      console.log(`❌ QUEUE EVENT: Job ${job.id} failed with error:`, err);
+    });
+    
+    this.genQueue.on('active', (job) => {
+      console.log(`🔄 QUEUE EVENT: Job ${job.id} is now active`);
+    });
+
+    this.eventListenersInitialized = true;
+  }
 
   async createJob(createJobDto: CreateJobDto) {
     const jobId = uuidv4();
     
-    console.log(`📝 JOBS: Creating job ${jobId} with prompt: ${createJobDto.prompt}`);
-    
     try {
-      // Check queue status
-      const waiting = await this.genQueue.getWaiting();
-      const active = await this.genQueue.getActive();
-      const completed = await this.genQueue.getCompleted();
-      const failed = await this.genQueue.getFailed();
-      
-      console.log(`📊 QUEUE STATUS: Waiting: ${waiting.length}, Active: ${active.length}, Completed: ${completed.length}, Failed: ${failed.length}`);
-      
-      // Add job to queue
-      console.log(`📤 JOBS: Adding job to queue with data:`, {
-        jobId,
-        prompt: createJobDto.prompt,
-        templateId: createJobDto.templateId,
-        style: createJobDto.style,
-        hasFile: !!createJobDto.file
-      });
+      // Don't load all queue status on every job creation - this causes memory issues
+      // Only load when explicitly needed (e.g., in testQueue endpoint)
       
       const job = await this.genQueue.add('generate', {
         jobId,
@@ -47,28 +56,6 @@ export class JobsService {
         templateId: createJobDto.templateId,
         aspectRatio: createJobDto.aspectRatio,
         style: createJobDto.style || 'cool_ngau',
-      });
-
-      console.log(`✅ JOBS: Job ${jobId} added to queue with Bull job ID: ${job.id}`);
-      console.log(`✅ JOBS: Job options:`, job.opts);
-      console.log(`✅ JOBS: Job data:`, job.data);
-
-      // Check if job is actually in queue
-      const queueStatus = await this.genQueue.getJob(job.id);
-      console.log(`🔍 JOBS: Job in queue:`, queueStatus ? 'YES' : 'NO');
-      console.log(`🔍 JOBS: Job status:`, queueStatus?.opts);
-
-      // Listen for queue events
-      this.genQueue.on('completed', (job, result) => {
-        console.log(`🎉 QUEUE EVENT: Job ${job.id} completed with result:`, result);
-      });
-      
-      this.genQueue.on('failed', (job, err) => {
-        console.log(`❌ QUEUE EVENT: Job ${job.id} failed with error:`, err);
-      });
-      
-      this.genQueue.on('active', (job) => {
-        console.log(`🔄 QUEUE EVENT: Job ${job.id} is now active`);
       });
 
       // Store job metadata
@@ -91,19 +78,18 @@ export class JobsService {
   }
 
   async getJobStream(jobId: string) {
-    console.log(`🔍 JOBS: Getting stream for job: ${jobId}`);
-    
     const metadata = await this.memoryCacheService.getJobMetadata(jobId);
-    console.log(`🔍 JOBS: Job metadata:`, metadata);
-    
     if (!metadata) {
       console.log(`🔍 JOBS: Job not found: ${jobId}`);
       throw new NotFoundException('Job not found');
     }
 
     const stream = this.realtimeService.createJobStream(jobId);
-    console.log(`🔍 JOBS: Stream created for job: ${jobId}`);
     return stream;
+  }
+
+  closeJobStream(jobId: string): void {
+    this.realtimeService.closeJobStream(jobId);
   }
 
   async getJobResult(jobId: string): Promise<JobResult | null> {
@@ -136,20 +122,11 @@ export class JobsService {
   // Test method to check queue status
   async testQueue() {
     try {
-      console.log('🧪 TEST: Testing queue connection...');
-      
       const waiting = await this.genQueue.getWaiting();
       const active = await this.genQueue.getActive();
       const completed = await this.genQueue.getCompleted();
       const failed = await this.genQueue.getFailed();
       
-      console.log('🧪 TEST: Queue status:', {
-        waiting: waiting.length,
-        active: active.length,
-        completed: completed.length,
-        failed: failed.length
-      });
-
       // Test adding a simple job
       const testJob = await this.genQueue.add('generate', {
         jobId: 'test-' + Date.now(),
@@ -158,14 +135,11 @@ export class JobsService {
         templateId: 'test'
       });
 
-      console.log('🧪 TEST: Test job added:', testJob.id);
-      
       return {
         queueStatus: { waiting: waiting.length, active: active.length, completed: completed.length, failed: failed.length },
         testJobId: testJob.id
       };
     } catch (error) {
-      console.error('🧪 TEST: Queue test failed:', error);
       throw error;
     }
   }
@@ -173,22 +147,13 @@ export class JobsService {
   // Method to manually trigger queue processing
   async triggerQueueProcessing() {
     try {
-      console.log('🔄 TRIGGER: Manually triggering queue processing...');
-      
       // Get waiting jobs
       const waiting = await this.genQueue.getWaiting();
-      console.log('🔄 TRIGGER: Waiting jobs:', waiting.length);
-      
       if (waiting.length > 0) {
-        console.log('🔄 TRIGGER: Found waiting jobs, attempting to process...');
-        
         // Try to process the first waiting job
         const firstJob = waiting[0];
-        console.log('🔄 TRIGGER: First waiting job:', firstJob.id, firstJob.data);
-        
         // Check if job is still waiting
-        const jobState = await firstJob.getState();
-        console.log('🔄 TRIGGER: Job state:', jobState);
+        const jobState = await firstJob.getState();   
         
         return {
           message: 'Queue processing triggered',
@@ -197,7 +162,6 @@ export class JobsService {
           firstJobState: jobState
         };
       } else {
-        console.log('🔄 TRIGGER: No waiting jobs found');
         return {
           message: 'No waiting jobs to process',
           waitingJobs: 0
@@ -257,6 +221,116 @@ export class JobsService {
       };
     } catch (error) {
       console.error('💰 PRICING: Failed to get pricing info:', error);
+      throw error;
+    }
+  }
+
+  // Clear everything: queue, memory cache, and streams
+  async clearAll() {
+    try {
+      console.log('🧹 CLEAR ALL: Clearing everything...');
+      
+      // Get before stats (only counts, not full data)
+      const waiting = await this.genQueue.getWaiting();
+      const active = await this.genQueue.getActive();
+      const completedCount = await this.genQueue.getCompletedCount();
+      const failedCount = await this.genQueue.getFailedCount();
+      const cacheStats = this.memoryCacheService.getStats();
+      
+      // Clear memory cache first (fastest)
+      const cacheCleared = this.memoryCacheService.clearAll();
+      
+      // Clear all streams
+      const streamsCleared = this.realtimeService.clearAllStreams();
+      
+      // Clear queue (waiting and active)
+      await this.genQueue.empty();
+      
+      // Clear completed and failed jobs in batches to avoid memory issues
+      // Process in small chunks instead of loading all at once
+      const BATCH_SIZE = 50;
+      let completedCleared = 0;
+      let failedCleared = 0;
+      
+      // Clear completed jobs in batches
+      while (true) {
+        const batch = await this.genQueue.getCompleted(0, BATCH_SIZE - 1);
+        if (batch.length === 0) break;
+        
+        for (const job of batch) {
+          try {
+            await job.remove();
+            completedCleared++;
+          } catch (error) {
+            // Ignore errors for individual job removal
+          }
+        }
+        
+        // Small delay to prevent overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      
+      // Clear failed jobs in batches
+      while (true) {
+        const batch = await this.genQueue.getFailed(0, BATCH_SIZE - 1);
+        if (batch.length === 0) break;
+        
+        for (const job of batch) {
+          try {
+            await job.remove();
+            failedCleared++;
+          } catch (error) {
+            // Ignore errors for individual job removal
+          }
+        }
+        
+        // Small delay to prevent overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      
+      console.log('🧹 CLEAR ALL: Completed');
+      
+      return {
+        message: 'All data cleared successfully',
+        before: {
+          queue: {
+            waiting: waiting.length,
+            active: active.length,
+            completed: completedCount,
+            failed: failedCount,
+          },
+          memory: {
+            metadata: cacheStats.jobMetadataCount,
+            results: cacheStats.jobResultsCount,
+          },
+          streams: streamsCleared,
+        },
+        cleared: {
+          queue: {
+            waiting: waiting.length,
+            active: active.length,
+            completed: completedCleared,
+            failed: failedCleared,
+          },
+          memory: cacheCleared,
+          streams: streamsCleared,
+        },
+        after: {
+          queue: {
+            waiting: 0,
+            active: 0,
+            completed: 0,
+            failed: 0,
+          },
+          memory: {
+            metadata: 0,
+            results: 0,
+          },
+          streams: 0,
+        },
+      };
+    } catch (error) {
+      console.error('🧹 CLEAR ALL: Failed to clear everything:', error);
       throw error;
     }
   }

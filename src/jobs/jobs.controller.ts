@@ -44,6 +44,33 @@ export class JobsController {
     return await this.jobsService.createJob(createJobDto);
   }
 
+  // Static routes must come before dynamic routes (:id)
+  @Get('test/queue')
+  async testQueue() {
+    return this.jobsService.testQueue();
+  }
+
+  @Post('test/trigger')
+  async triggerQueueProcessing() {
+    return this.jobsService.triggerQueueProcessing();
+  }
+
+  @Delete('test/queue')
+  async clearQueue() {
+    return this.jobsService.clearQueue();
+  }
+
+  @Delete('test/clear-all')
+  async clearAll() {
+    return this.jobsService.clearAll();
+  }
+
+  @Get('pricing')
+  async getPricing() {
+    return this.jobsService.getPricingInfo();
+  }
+
+  // Dynamic routes (:id) must come after static routes
   @Get(':id/stream')
   async streamJob(@Param('id') id: string, @Res() res: Response) {
     try {
@@ -68,6 +95,8 @@ export class JobsController {
       res.on('close', () => {
         console.log(`SSE stream closed for job: ${id}`);
         stream.destroy();
+        // Clean up stream from realtime service
+        this.jobsService.closeJobStream(id);
       });
 
     } catch (error) {
@@ -98,25 +127,5 @@ export class JobsController {
   @Delete(':id')
   async cancelJob(@Param('id') id: string) {
     return this.jobsService.cancelJob(id);
-  }
-
-  @Get('test/queue')
-  async testQueue() {
-    return this.jobsService.testQueue();
-  }
-
-  @Post('test/trigger')
-  async triggerQueueProcessing() {
-    return this.jobsService.triggerQueueProcessing();
-  }
-
-  @Delete('test/queue')
-  async clearQueue() {
-    return this.jobsService.clearQueue();
-  }
-
-  @Get('pricing')
-  async getPricing() {
-    return this.jobsService.getPricingInfo();
   }
 }

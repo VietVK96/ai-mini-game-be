@@ -50,12 +50,37 @@ export class MemoryCacheService {
   private cleanupExpiredResults(): void {
     const now = Date.now();
     
+    // Clean up expired results
     for (const [jobId, result] of this.jobResults.entries()) {
       if (now - result.createdAt.getTime() > this.resultTtl) {
         this.jobResults.delete(jobId);
         this.jobMetadata.delete(jobId);
       }
     }
+
+    // Also clean up expired metadata without results (older than 1 hour)
+    const metadataTtl = 3600000; // 1 hour in milliseconds
+    for (const [jobId, metadata] of this.jobMetadata.entries()) {
+      const age = now - metadata.createdAt.getTime();
+      // Clean up if metadata is old and has no associated result
+      if (age > metadataTtl && !this.jobResults.has(jobId)) {
+        this.jobMetadata.delete(jobId);
+      }
+    }
+  }
+
+  // Clear all memory cache
+  clearAll(): { deletedMetadata: number; deletedResults: number } {
+    const metadataCount = this.jobMetadata.size;
+    const resultsCount = this.jobResults.size;
+    
+    this.jobMetadata.clear();
+    this.jobResults.clear();
+    
+    return {
+      deletedMetadata: metadataCount,
+      deletedResults: resultsCount,
+    };
   }
 
   // Get cache statistics

@@ -53,4 +53,19 @@ export class RealtimeService {
       this.jobStreams.delete(jobId);
     }
   }
+
+  // Clear all streams
+  clearAllStreams(): number {
+    const count = this.jobStreams.size;
+    for (const [jobId, stream] of this.jobStreams.entries()) {
+      try {
+        stream.push(null);
+        stream.destroy();
+      } catch (error) {
+        // Ignore errors when destroying streams
+      }
+    }
+    this.jobStreams.clear();
+    return count;
+  }
 }
