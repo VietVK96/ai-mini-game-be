@@ -137,9 +137,9 @@ export class GeminiService {
       QUY TRÌNH GHÉP ẢNH:
       1. Sử dụng ẢNH thứ hai làm background layer BỊ KHÓA (không chỉnh sửa),
       2. Trích xuất người từ ẢNH 1 (xóa background, chỉ giữ lại người từ vùng eo trở lên),
-      3. Áp dụng trang phục đúng từ ẢNH 3 hoặc ẢNH 4 (chọn dựa trên giới tính), trang phục,phụ kiện phải khớp với cơ thể,
-      4. Đặt chủ thể (subject) tại tọa độ đã chỉ định trên ẢNH thứ hai,
-      5. cân đối tỷ lệ khuôn mặt và cơ thể,
+      3. Điều chỉnh TỶ LỆ TỔNG THỂ: Scale toàn bộ subject (đầu + thân) để đảm bảo tỷ lệ tự nhiên giữa đầu và cơ thể,
+      4. Áp dụng trang phục đúng từ ẢNH 3 hoặc ẢNH 4 (chọn dựa trên giới tính), trang phục và phụ kiện phải khớp với cơ thể đã được scale,
+      5. Đặt chủ thể (subject) tại tọa độ đã chỉ định trên ẢNH thứ hai,
       6. Xử lý độ sâu/che khuất: 2 dây là foreground (trên subject), 2 dây là background (sau subject),
 
       KẾT QUẢ:
@@ -170,6 +170,18 @@ export class GeminiService {
       - Khoảng trống phía trên: ~7–9%
       - Chủ thể ở chính giữa khung hình.
 
+      TỶ LỆ ĐẦU VÀ CƠ THỂ (QUAN TRỌNG — TRÁNH ĐẦU TO THÂN NHỎ):
+      - Tỷ lệ đầu so với thân phải TỰ NHIÊN và CÂN ĐỐI như người thật.
+      - Kích thước đầu (từ đỉnh đầu đến cằm) chiếm khoảng 12-15% chiều cao tổng thể của subject (từ đỉnh đầu đến hông/eo).
+      - Kích thước thân (từ vai đến hông/eo) chiếm khoảng 85-88% chiều cao tổng thể của subject.
+      - KHÔNG ĐƯỢC giữ nguyên kích thước đầu từ ẢNH 1 nếu nó quá lớn so với thân.
+      - PHẢI scale toàn bộ subject (đầu + thân) đồng bộ để đảm bảo tỷ lệ tự nhiên.
+      - Nếu ảnh gốc có đầu to, PHẢI thu nhỏ toàn bộ subject (bao gồm cả đầu) để đạt tỷ lệ tự nhiên.
+      - Nếu ảnh gốc có đầu nhỏ, PHẢI phóng to toàn bộ subject (bao gồm cả đầu) để đạt tỷ lệ tự nhiên.
+      - Tỷ lệ vai rộng: khoảng 22-25% chiều rộng canvas (tự nhiên, không quá rộng hoặc quá hẹp).
+      - Khoảng cách từ đỉnh đầu đến vai: khoảng 8-10% chiều cao canvas.
+      - Khoảng cách từ vai đến hông/eo: khoảng 30-35% chiều cao canvas.
+
       QUY TẮC NGHIÊM NGẶT:
       - Chỉ scale, xoay, hoặc đặt vị trí SUBJECT (từ ẢNH 1) để khớp với các tọa độ này.
       - Crop subject tại mức hông/eo — KHÔNG ĐƯỢC bao gồm chân hoặc full body.
@@ -191,11 +203,12 @@ export class GeminiService {
       --------------------------------------------------
       1) BẢO TOÀN KHUÔN MẶT (ƯU TIÊN CAO NHẤT)
 
-      - Khuôn mặt từ ẢNH 1 phải giữ nguyên 100%,
+      - Khuôn mặt từ ẢNH 1 phải giữ nguyên 100% về ĐẶC ĐIỂM và DIỆN MẠO,
       - Không vẽ lại, không swap mặt,
       - Giữ nguyên các đặc điểm khuôn mặt, tuổi tác, kết cấu da, nốt ruồi, sẹo,
       - Biểu cảm khuôn mặt CHỈ có thể thay đổi qua input POSE + EXPRESSION,
-
+      - LƯU Ý: "Giữ nguyên 100%" có nghĩa là giữ nguyên ĐẶC ĐIỂM, KHÔNG có nghĩa là giữ nguyên KÍCH THƯỚC.
+      - Kích thước khuôn mặt CÓ THỂ được scale để đạt tỷ lệ tự nhiên với cơ thể (xem phần TỶ LỆ ĐẦU VÀ CƠ THỂ).
 
       --------------------------------------------------
       2) BẤT BIẾN TEMPLATE (ƯU TIÊN THỨ HAI)
@@ -244,12 +257,14 @@ export class GeminiService {
       - Nếu NỮ → CHỈ sử dụng ẢNH 4.
 
       QUY TẮC TRANG PHỤC NGHIÊM NGẶT:
-      - Phóng to hoặc thu nhỏ trang phục để khớp với cơ thể.
-      - thay đổi cả kích thước và vị trí của phụ kiện như mũ để khớp với đầu, vòng tay để khớp với tay, túi xách và dây quai để khớp với dáng pose
-      - thay đổi trang phục theo pose dáng
+      - BƯỚC 1: Scale toàn bộ subject (đầu + thân) để đạt tỷ lệ tự nhiên (xem phần TỶ LỆ ĐẦU VÀ CƠ THỂ).
+      - BƯỚC 2: Phóng to hoặc thu nhỏ trang phục để khớp với cơ thể ĐÃ ĐƯỢC SCALE.
+      - Thay đổi cả kích thước và vị trí của phụ kiện như mũ để khớp với đầu (đã scale), vòng tay để khớp với tay, túi xách và dây quai để khớp với dáng pose.
+      - Thay đổi trang phục theo pose dáng.
       - KHÔNG ĐƯỢC trộn các phần tử trang phục nam và nữ.
       - KHÔNG ĐƯỢC giải thích lại trang phục như unisex.
       - KHÔNG ĐƯỢC suy luận trang phục từ text.
+      - LƯU Ý: Trang phục phải khớp với cơ thể đã được scale đúng tỷ lệ, KHÔNG phải cơ thể gốc từ ẢNH 1.
 
       ÁP DỤNG TRANG PHỤC:
       - Sao chép CHÍNH XÁC thiết kế trang phục:
@@ -264,8 +279,9 @@ export class GeminiService {
       ${prompt}
       - Áp dụng BIỂU CẢM trước, sau đó POSE.
       - Bỏ qua mọi hướng dẫn về trang phục, màu sắc, ánh sáng, camera, hoặc background.
-      - Nếu pose xung đột với quy tắc POSITION, ANCHOR, hoặc TAPE: giữ các quy tắc đó và điều chỉnh pose tối thiểu.
+      - Nếu pose xung đột với quy tắc POSITION, ANCHOR, TỶ LỆ, hoặc TAPE: giữ các quy tắc đó và điều chỉnh pose tối thiểu.
       - Chỉ lấy từ hông trở lên để áp dụng pose.
+      - LƯU Ý: Khi áp dụng pose, PHẢI giữ nguyên tỷ lệ đầu/cơ thể đã được thiết lập (xem phần TỶ LỆ ĐẦU VÀ CƠ THỂ).
 
       ==================================================
       RÀNG BUỘC PHỦ ĐỊNH
