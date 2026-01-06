@@ -53,7 +53,7 @@ async function bootstrap() {
           res.setHeader('Content-Type', 'image/jpeg');
         } else if (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png')) {
           // Original images: shorter cache
-          res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
+        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minutes
         }
       }
     },

@@ -170,17 +170,32 @@ export class GeminiService {
       - Khoảng trống phía trên: ~7–9%
       - Chủ thể ở chính giữa khung hình.
 
-      TỶ LỆ ĐẦU VÀ CƠ THỂ (QUAN TRỌNG — TRÁNH ĐẦU TO THÂN NHỎ):
-      - Tỷ lệ đầu so với thân phải TỰ NHIÊN và CÂN ĐỐI như người thật.
-      - Kích thước đầu (từ đỉnh đầu đến cằm) chiếm khoảng 12-15% chiều cao tổng thể của subject (từ đỉnh đầu đến hông/eo).
-      - Kích thước thân (từ vai đến hông/eo) chiếm khoảng 85-88% chiều cao tổng thể của subject.
-      - KHÔNG ĐƯỢC giữ nguyên kích thước đầu từ ẢNH 1 nếu nó quá lớn so với thân.
-      - PHẢI scale toàn bộ subject (đầu + thân) đồng bộ để đảm bảo tỷ lệ tự nhiên.
-      - Nếu ảnh gốc có đầu to, PHẢI thu nhỏ toàn bộ subject (bao gồm cả đầu) để đạt tỷ lệ tự nhiên.
-      - Nếu ảnh gốc có đầu nhỏ, PHẢI phóng to toàn bộ subject (bao gồm cả đầu) để đạt tỷ lệ tự nhiên.
-      - Tỷ lệ vai rộng: khoảng 22-25% chiều rộng canvas (tự nhiên, không quá rộng hoặc quá hẹp).
-      - Khoảng cách từ đỉnh đầu đến vai: khoảng 8-10% chiều cao canvas.
-      - Khoảng cách từ vai đến hông/eo: khoảng 30-35% chiều cao canvas.
+     TỶ LỆ ĐẦU VÀ CƠ THỂ (CỰC KỲ QUAN TRỌNG — MODEL-LIKE)
+
+      MỤC TIÊU:
+      - Tạo cảm giác người mẫu: cao, thanh, cổ dài, thân trên dài.
+      - Tránh tuyệt đối đầu to – thân ngắn – cổ cụt.
+
+      TỶ LỆ CHI TIẾT:
+      - Đầu (đỉnh → cằm):
+        • 10–12% chiều cao subject (đỉnh → hông/eo).
+
+      - Thân (vai → hông/eo):
+        • 88–90% chiều cao subject.
+
+      - Khoảng cách đỉnh đầu → vai:
+        • ~7–9% chiều cao canvas.
+
+      - Vai:
+        • Rộng ~22–24% chiều rộng canvas.
+        • Vai ngang, gọn, không xuôi.
+
+      QUY TẮC SCALE:
+      - KHÔNG giữ nguyên kích thước đầu từ ẢNH 1 nếu cảm giác đầu lớn.
+      - PHẢI scale toàn bộ subject (đầu + thân) đồng bộ.
+      - Ưu tiên thu nhỏ subject nếu đầu chiếm ưu thế thị giác.
+      - Tuyệt đối không phóng to đầu riêng lẻ.
+
 
       QUY TẮC NGHIÊM NGẶT:
       - Chỉ scale, xoay, hoặc đặt vị trí SUBJECT (từ ẢNH 1) để khớp với các tọa độ này.
@@ -257,7 +272,7 @@ export class GeminiService {
       - Nếu NỮ → CHỈ sử dụng ẢNH 4.
 
       QUY TẮC TRANG PHỤC NGHIÊM NGẶT:
-      - BƯỚC 1: Scale toàn bộ subject (đầu + thân) để đạt tỷ lệ tự nhiên (xem phần TỶ LỆ ĐẦU VÀ CƠ THỂ).
+      - BƯỚC 1: Scale toàn bộ subject (đầu + thân) để đạt tỷ lệ tự nhiên (xem phần TỶ LỆ ĐẦU VÀ CƠ THỂ và chiều dài cổ, tay).
       - BƯỚC 2: Phóng to hoặc thu nhỏ trang phục để khớp với cơ thể ĐÃ ĐƯỢC SCALE.
       - Thay đổi cả kích thước và vị trí của phụ kiện như mũ để khớp với đầu (đã scale), vòng tay để khớp với tay, túi xách và dây quai để khớp với dáng pose.
       - Thay đổi trang phục theo pose dáng.
