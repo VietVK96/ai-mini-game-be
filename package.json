@@ -22,7 +22,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@google/genai": "^1.25.0",
+    "@google/genai": "^1.34.0",
     "@google/generative-ai": "^0.2.1",
     "@nestjs/bull": "^10.0.1",
     "@nestjs/common": "^10.0.0",

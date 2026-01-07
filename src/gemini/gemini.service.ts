@@ -101,218 +101,61 @@ export class GeminiService {
 
       // Build contents for API with both images - instruction first to ensure AI reads it before processing images
       const instruction = `
-      VAI TRÒ
-      Bạn là một chuyên gia ghép ảnh chuyên nghiệp (giống như Photoshop layer compositing).
-      Nhiệm vụ của bạn là CHỈ GHÉP ẢNH (ALPHA COMPOSITING) — đặt một ảnh lên trên ảnh khác.
-      Bạn KHÔNG ĐƯỢC tạo mới, vẽ lại, inpaint, hoặc tưởng tượng các phần tử hình ảnh mới.
-      Bạn KHÔNG ĐƯỢC chỉnh sửa background layer (ẢNH thứ hai) bằng bất kỳ cách nào.
+       AI TRÒ CÁC ẢNH (CỐ ĐỊNH)
+          ẢNH 1: ảnh chụp chân dung của tôi, sử dụng để trích xuất mặt.
+          ẢNH 2: Template ZAPP = canvas cuối (LOCKED) → giữ pixel‑identical (màu, chữ, dây).
+          ẢNH 3: Trang phục NAM (giữ logo ZAPP).
+          ẢNH 4: Trang phục NỮ (giữ logo ZAPP).
+        MỤC TIÊU
+          Tạo một poster người mẫu trong studio chuyên nghiệp
+          Giữ nguyên các đường nét đặc trưng của gương mặt, Giữ nguyên kiểu tóc
+          Điều quan trọng: Duy trì sự nhất quán hoàn hảo về nhận dạng khuôn mặt với ẢNH 1. 
+          Bảo toàn nhận dạng là ưu tiên hàng đầu.
+          giữ nguyên các đường nét đặc trưng của gương mặt
+          Dùng ẢNH 2 làm background khóa.
+          Trích xuất khuôn mặt từ ẢNH 1.
+          Scale toàn bộ subject (đầu + thân) để đạt tỷ lệ người thật.
+          Áp dụng đúng trang phục từ ẢNH 3 (NAM) hoặc ẢNH 4 (NỮ) khớp với cơ thể đã scale.
+          Đặt subject đúng tọa độ.
+          Độ sâu dây: 2 dây foreground (blur) trước subject, 2 dây background sau subject.
+          Kết quả = ẢNH 2 (không đổi) + subject đã ghép.
 
-
-      ==================================================
-      VAI TRÒ CỦA CÁC ẢNH (CỐ ĐỊNH — KHÔNG ĐƯỢC NHẦM LẪN)
-
-      ẢNH 1 — NGUỒN KHUÔN MẶT / NHẬN DẠNG
-      - Người thật để tham chiếu.
-      - CHỈ sử dụng để trích xuất người.
-      - Xóa hoàn toàn background, logo, watermark của ẢNH 1.
-
-      ẢNH thứ hai — TEMPLATE ZAPP (CANVAS CUỐI CÙNG)
-      - Background có brand với bốn dây màu vàng.
-      - Đây là CANVAS CUỐI CÙNG và phải giữ nguyên pixel-identical số lượng, màu sắc, chữ.
-
-      ẢNH 3 — THAM CHIẾU TRANG PHỤC NAM
-      - Tham chiếu thiết kế trang phục cho người nam.
-      - Giữ nguyên logo ZAPP trên áo.
-
-      ẢNH 4 — THAM CHIẾU TRANG PHỤC NỮ
-      - Tham chiếu thiết kế trang phục cho người nữ.
-      - Giữ nguyên logo ZAPP trên áo.
-
-
-      ==================================================
-      MỤC TIÊU
-
-      Tạo MỘT ảnh cuối cùng chân thực bằng cách CHỈ GHÉP ẢNH (KHÔNG TẠO MỚI):
-
-      QUY TRÌNH GHÉP ẢNH:
-      1. Sử dụng ẢNH thứ hai làm background layer BỊ KHÓA (không chỉnh sửa),
-      2. Trích xuất người từ ẢNH 1 (xóa background, chỉ giữ lại người từ vùng eo trở lên),
-      3. Điều chỉnh TỶ LỆ TỔNG THỂ: Scale toàn bộ subject (đầu + thân) để đảm bảo tỷ lệ tự nhiên giữa đầu và cơ thể,
-      4. Áp dụng trang phục đúng từ ẢNH 3 hoặc ẢNH 4 (chọn dựa trên giới tính), trang phục và phụ kiện phải khớp với cơ thể đã được scale,
-      5. Đặt chủ thể (subject) tại tọa độ đã chỉ định trên ẢNH thứ hai,
-      6. Xử lý độ sâu/che khuất: 2 dây là foreground (trên subject), 2 dây là background (sau subject),
-
-      KẾT QUẢ:
-      - Ảnh cuối = ẢNH thứ hai (không đổi) + Chủ thể (đặt trên với trang phục đúng và khớp với cơ thể)
-      - TẤT CẢ các phần tử từ ẢNH thứ hai phải hiển thị và không được phép thay đổi trong ảnh cuối.
-
-
-      ==================================================
-      VỊ TRÍ (TUYỆT ĐỐI — CHỈ SỐ)
-
-      QUAN TRỌNG: Chỉ di chuyển SUBJECT. KHÔNG ĐƯỢC động vào ẢNH thứ hai.
-
-      YÊU CẦU KHUNG HÌNH — CHÂN DUNG TỪ HÔNG TRỞ LÊN:
-      - Ảnh cuối BẮT BUỘC phải là CHÂN DUNG TỪ HÔNG TRỞ LÊN (từ hông/eo trở lên tối đa 2/3 cơ thể).
-      - Crop/khung hình subject sao cho CẠNH DƯỚI ở mức HÔNG hoặc EO.
-      - KHÔNG ĐƯỢC hiển thị full body, chân, hoặc phần dưới hông.
-      - Chỉ hiển thị: đầu, vai, phần thân trên, và vùng hông/eo loại bỏ chân.
-      - Subject phải xuất hiện như chân dung nửa người giống như ảnh chân dung chuyên nghiệp.
-
-      Tọa độ được chuẩn hóa theo canvas ẢNH thứ hai (100% chiều rộng × 100% chiều cao).
-
-      ĐỊNH VỊ SUBJECT (CHỈ SUBJECT DI CHUYỂN):
-      - Tâm khuôn mặt: x = 48–50%, y = 27–29% (ĐIỂM NEO CỐ ĐỊNH)
-      - Đường mắt: y ≈ 25–26%
-      - Đường vai: y ≈ 46–50%
-      - Đường crop hông/eo: y ≈ 78–85% (CẠNH DƯỚI của subject, nơi cơ thể bị cắt)
-      - Chiều rộng body subject: x ≈ 19% → 79%
-      - Khoảng trống phía trên: ~7–9%
-      - Chủ thể ở chính giữa khung hình.
-
-     TỶ LỆ ĐẦU VÀ CƠ THỂ (CỰC KỲ QUAN TRỌNG — MODEL-LIKE)
-
-      MỤC TIÊU:
-      - Tạo cảm giác người mẫu: cao, thanh, cổ dài, thân trên dài.
-      - Tránh tuyệt đối đầu to – thân ngắn – cổ cụt.
-
-      TỶ LỆ CHI TIẾT:
-      - Đầu (đỉnh → cằm):
-        • 10–12% chiều cao subject (đỉnh → hông/eo).
-
-      - Thân (vai → hông/eo):
-        • 88–90% chiều cao subject.
-
-      - Khoảng cách đỉnh đầu → vai:
-        • ~7–9% chiều cao canvas.
-
-      - Vai:
-        • Rộng ~22–24% chiều rộng canvas.
-        • Vai ngang, gọn, không xuôi.
-
-      QUY TẮC SCALE:
-      - KHÔNG giữ nguyên kích thước đầu từ ẢNH 1 nếu cảm giác đầu lớn.
-      - PHẢI scale toàn bộ subject (đầu + thân) đồng bộ.
-      - Ưu tiên thu nhỏ subject nếu đầu chiếm ưu thế thị giác.
-      - Tuyệt đối không phóng to đầu riêng lẻ.
-
-
-      QUY TẮC NGHIÊM NGẶT:
-      - Chỉ scale, xoay, hoặc đặt vị trí SUBJECT (từ ẢNH 1) để khớp với các tọa độ này.
-      - Crop subject tại mức hông/eo — KHÔNG ĐƯỢC bao gồm chân hoặc full body.
-      - Khung hình subject như CHÂN DUNG TỪ HÔNG TRỞ LÊN, giống như ảnh chân dung chuyên nghiệp.
-      - KHÔNG ĐƯỢC di chuyển, thay đổi kích thước, đặt lại vị trí, hoặc chỉnh sửa BẤT KỲ phần tử nào từ ẢNH thứ hai.
-      - Các phần tử ẢNH thứ hai (màu background, dây, text) giữ nguyên VỊ TRÍ CHÍNH XÁC ban đầu.
-      - Nếu subject cần fit, điều chỉnh kích thước/vị trí SUBJECT, KHÔNG phải background.
-      - Phần dưới của subject (hông/eo) nên ở gần phần dưới canvas, để lại khoảng trống tối thiểu phía dưới.
-
-      QUY TẮC ĐIỂM NEO (KHÔNG ĐƯỢC LỆCH)
-      - Tâm khuôn mặt là ĐIỂM NEO CỐ ĐỊNH — PHẢI ở x = 48–50%, y = 27–29%.
-      - Tất cả tính toán định vị bắt đầu từ điểm neo này.
-      - Thay đổi pose CHỈ được phép bằng cách điều chỉnh vai, tay, hoặc nghiêng đầu.
-      - Điểm neo (tâm khuôn mặt) KHÔNG DI CHUYỂN.
-
-      ==================================================
-      QUY TẮC CỨNG — THỨ TỰ ƯU TIÊN (NGHIÊM NGẶT)
-
-      --------------------------------------------------
-      1) BẢO TOÀN KHUÔN MẶT (ƯU TIÊN CAO NHẤT)
-
-      - Khuôn mặt từ ẢNH 1 phải giữ nguyên 100% về ĐẶC ĐIỂM và DIỆN MẠO,
-      - Không vẽ lại, không swap mặt,
-      - Giữ nguyên các đặc điểm khuôn mặt, tuổi tác, kết cấu da, nốt ruồi, sẹo,
-      - Biểu cảm khuôn mặt CHỈ có thể thay đổi qua input POSE + EXPRESSION,
-      - LƯU Ý: "Giữ nguyên 100%" có nghĩa là giữ nguyên ĐẶC ĐIỂM, KHÔNG có nghĩa là giữ nguyên KÍCH THƯỚC.
-      - Kích thước khuôn mặt CÓ THỂ được scale để đạt tỷ lệ tự nhiên với cơ thể (xem phần TỶ LỆ ĐẦU VÀ CƠ THỂ).
-
-      --------------------------------------------------
-      2) BẤT BIẾN TEMPLATE (ƯU TIÊN THỨ HAI)
-
-      QUAN TRỌNG: ẢNH thứ hai LÀ BACKGROUND LAYER — KHÔNG ĐƯỢC CHỈNH SỬA
-
-      TEMPLATE (ẢNH số 2) — BACKGROUND BỊ KHÓA:
-      - ẢNH thứ hai phải giữ nguyên không đổi.
-      - KHÔNG được chỉnh sửa: KHÔNG TÁI TẠO, KHÔNG VẼ LẠI, KHÔNG SỬA MÀU, KHÔNG CHỈNH SỬA, KHÔNG THAY ĐỔI.
-      - NHIỆM VỤ DUY NHẤT: đặt subject đã trích xuất từ ẢNH 1 LÊN TRÊN ẢNH thứ hai bằng ghép alpha.
-      - Nghĩ như thao tác PHOTOSHOP LAYER: ẢNH thứ hai = hình nền layer bị khóa, subject = layer mới ở trên.
-
-      DÂY/STRIP/RIBBON — TÀI SẢN BRAND TUYỆT ĐỐI (KHÔNG DUNG THỨ):
-      - Số lượng dây trong ảnh cuối PHẢI KHỚP CHÍNH XÁC với 4 dây
-      - Subject được đặt sau 1 dây ở góc dưới-trái và 1 dọc góc trên bên phải, và chủ thể được đặt trước 2 dây chéo còn lại.
-      - MỌI dây trong ẢNH thứ hai phải xuất hiện trong ảnh cuối:
-        • CHÍNH XÁC cùng số lượng 4 dây
-        • CHÍNH XÁC cùng nội dung text
-        • CHÍNH XÁC cùng vị trí (tọa độ x, y)
-        • CHÍNH XÁC cùng kích thước/độ dày
-        • CHÍNH XÁC cùng góc/độ xoay
-        • CHÍNH XÁC cùng mức blur
-        • CHÍNH XÁC cùng opacity
-        • CHÍNH XÁC cùng màu
-      - Không được tạo, nhân đôi, kéo dài, uốn cong, làm méo, xóa, ẩn, hoặc tưởng tượng bất kỳ dây/strap/line nào.
-      - Không được di chuyển hoặc đặt lại vị trí bất kỳ dây nào.
-      - Nếu ảnh cuối có số lượng dây khác với ẢNH thứ hai, kết quả HOÀN TOÀN KHÔNG HỢP LỆ.
-
-      ĐỘ SÂU BẰNG BLUR (CHỈ CHE KHUẤT — KHÔNG CHỈNH SỬA):
-      - CHỈ 2 dây bị blur nặng này là FOREGROUND: Dây chéo lớn bị blur góc dưới-trái và Dây dọc lớn bị blur góc bên phải ở TRÊN subject
-      - 2 dây chéo sắc nét khác là BACKGROUND và phải ở SAU subject.
-      - Subject KHÔNG ĐƯỢC đặt sau mọi dây.
-
-      VÙNG AN TOÀN KHUÔN MẶT:
-      - Không dây nào được che mắt, mũi, hoặc miệng.
-
-      --------------------------------------------------
-      3) CHỌN TRANG PHỤC — NHẬN BIẾT GIỚI TÍNH (ƯU TIÊN THỨ BA)
-
-      BƯỚC 1 — Xác định giới tính từ ẢNH 1:
-      - Phân tích khuôn mặt, tóc, cấu trúc cơ thể, và tổng thể ngoại hình.
-      - Phân loại là NAM hoặc NỮ.
-
-      BƯỚC 2 — Chọn trang phục:
-      - Nếu NAM → CHỈ sử dụng ẢNH 3.
-      - Nếu NỮ → CHỈ sử dụng ẢNH 4.
-
-      QUY TẮC TRANG PHỤC NGHIÊM NGẶT:
-      - BƯỚC 1: Scale toàn bộ subject (đầu + thân) để đạt tỷ lệ tự nhiên (xem phần TỶ LỆ ĐẦU VÀ CƠ THỂ và chiều dài cổ, tay).
-      - BƯỚC 2: Phóng to hoặc thu nhỏ trang phục để khớp với cơ thể ĐÃ ĐƯỢC SCALE.
-      - Thay đổi cả kích thước và vị trí của phụ kiện như mũ để khớp với đầu (đã scale), vòng tay để khớp với tay, túi xách và dây quai để khớp với dáng pose.
-      - Thay đổi trang phục theo pose dáng.
-      - KHÔNG ĐƯỢC trộn các phần tử trang phục nam và nữ.
-      - KHÔNG ĐƯỢC giải thích lại trang phục như unisex.
-      - KHÔNG ĐƯỢC suy luận trang phục từ text.
-      - LƯU Ý: Trang phục phải khớp với cơ thể đã được scale đúng tỷ lệ, KHÔNG phải cơ thể gốc từ ẢNH 1.
-
-      ÁP DỤNG TRANG PHỤC:
-      - Sao chép CHÍNH XÁC thiết kế trang phục:
-        áo khoác/áo trên, kiểu phần dưới, tỷ lệ, màu sắc, chất liệu, dây đai, chi tiết và logo.
-      - Kiểu phần dưới phải khớp với tham chiếu.
-      - Bỏ qua background, ánh sáng, pose, camera từ ảnh trang phục.
-
-      --------------------------------------------------
-      4) POSE + BIỂU CẢM (ƯU TIÊN THẤP)
-
-      Áp dụng input này CHÍNH XÁC:
-      ${prompt}
-      - Áp dụng BIỂU CẢM trước, sau đó POSE.
-      - Bỏ qua mọi hướng dẫn về trang phục, màu sắc, ánh sáng, camera, hoặc background.
-      - Nếu pose xung đột với quy tắc POSITION, ANCHOR, TỶ LỆ, hoặc TAPE: giữ các quy tắc đó và điều chỉnh pose tối thiểu.
-      - Chỉ lấy từ hông trở lên để áp dụng pose.
-      - LƯU Ý: Khi áp dụng pose, PHẢI giữ nguyên tỷ lệ đầu/cơ thể đã được thiết lập (xem phần TỶ LỆ ĐẦU VÀ CƠ THỂ).
-
-      ==================================================
-      RÀNG BUỘC PHỦ ĐỊNH
-      - Không text hoặc watermark thêm
-      - Không logo bị nhân đôi hoặc méo
-      - Không có hiện tượng mờ nhòe hoặc quầng sáng
-      - Không tay hoặc cánh tay bị biến dạng
-      - Không bóng, mảnh vỡ, hoặc mảnh dây thêm
-      - Không có băng dính được dán rối hoặc lộn xộn.
-      - Không tăng số lượng hay giảm số lượng băng dính, dây chỉ được 4 dây.
-      - Không có bố cục phẳng.
-      - Không có phông nền lộn xộn.
-      ==================================================
-      ĐẦU RA
-      - CHỈ trả về ảnh cuối cùng
-      - Không giải thích text
+        **BỐ CỤC & TỶ LỆ (Nguyên tắc tự nhiên)**
+        - Loại ảnh: Ảnh trung bình (chân dung từ eo trở lên).
+        - Vị trí chủ thể: ở chính giữa khung hình. Mắt nằm ở 1/3 trên cùng (Nguyên tắc một phần ba)
+        - Tỷ lệ cơ thể: Tỷ lệ đầu-vai chính xác về mặt giải phẫu. Đầu phải trông kết nối tự nhiên với cơ thể. Không phóng to đầu; điều chỉnh tỷ lệ cơ thể để phù hợp với kích thước đầu.
+        
+        **ÁNH SÁNG & PHA TRỘN (Quan trọng để đạt độ chân thực)**
+        - Áp dụng "Chiếu sáng toàn cục" để hòa trộn chủ thể vào nền ZAPP.
+        - Điều chỉnh hướng chiếu sáng và nhiệt độ màu của chủ thể sao cho phù hợp với môi trường nền.
+        - Tạo bóng đổ chân thực từ các dải băng ở tiền cảnh lên quần áo/cơ thể để tạo chiều sâu.
+        - Kết cấu da: Giữ nguyên lỗ chân lông, các khuyết điểm nhỏ và tông màu da tự nhiên từ [HÌNH 1]. Tránh vẻ ngoài da "nhựa" hoặc "sáp".
+        
+          QUY TẮC CỨNG (THỨ TỰ ƯU TIÊN)
+          1) Bảo toàn khuôn mặt (cao nhất)
+          giữ nguyên các đường nét đặc trưng của gương mặt: bao gồm: mắt,mũi,tai,má,màu tóc,da, lông mày,nốt ruồi, sẹo, môi
+          2) Template bất biến
+          ẢNH 2 tuyệt đối không chỉnh sửa. 4 dây phải giữ nguyên (số lượng, vị trí, góc, blur, opacity, màu, text).
+          Foreground: 2 dây blur (chéo dưới góc trái, dọc trên bên phải) trước subject.
+          Background: 2 dây sắc nét sau subject.
+          Không được che mắt/mũi/miệng.2 dây background không che subject. 
+          không tạo dây mới, không vẽ lại, không inpaint, không tưởng tượng, không chỉnh sửa background.
+          3) Trang phục theo giới tính
+          Xác định NAM/NỮ từ ẢNH 1.
+          NAM → chỉ ẢNH 3; NỮ → chỉ ẢNH 4.
+          Fit trang phục & phụ kiện theo pose.
+          Sao chép chính xác thiết kế, màu, chất liệu, logo.
+          Không trộn nam/nữ; không suy luận từ text.
+          4) Pose & Biểu cảm (thấp)
+          Áp dụng input: ${prompt}
+          Ưu tiên biểu cảm → pose;
+          Nếu xung đột với anchor/tỷ lệ/dây → giữ quy tắc, chỉnh pose tối thiểu.
+          RÀNG BUỘC PHỦ ĐỊNH
+          Không thêm text/watermark; không nhân đôi/méo logo.
+          Không mờ nhòe/quầng sáng; không biến dạng tay.
+          Không thêm/bớt dây (luôn 4 dây); không nền lộn xộn.
+          ĐẦU RA
+          Chỉ trả về ảnh cuối. Không giải thích.
       `;
 
       const contents = this.buildContentsWithBackground(
@@ -334,7 +177,7 @@ export class GeminiService {
       // 3) Make the API call
       console.log('🎨 GEMINI: Making API call with both images...');
       const response = await this.genAI.models.generateContent({
-        model: "gemini-2.5-flash-image",
+        model: "gemini-3-pro-image-preview",
         contents,
         config: { 
           responseModalities: ["IMAGE"], 

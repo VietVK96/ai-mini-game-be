@@ -152,7 +152,7 @@ export class GenConsumer {
       }
       
       console.log('🎨 CONSUMER: Reference template loaded, size:', backgroundTemplateBuffer.length, 'bytes');
-      console.log('🎨 CONSUMER: MIME types - Input:', inputMimeType, 'Reference:', backgroundMimeType);
+    console.log('🎨 CONSUMER: MIME types - Input:', inputMimeType, 'Reference:', backgroundMimeType);
 
       // AI Image Editing - Gửi cả ảnh chính và ảnh reference template cho AI
       await this.memoryCacheService.updateJobMetadata(jobId, {
