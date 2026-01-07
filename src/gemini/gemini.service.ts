@@ -116,7 +116,6 @@ export class GeminiService {
           Trích xuất khuôn mặt từ ẢNH 1.
           Scale toàn bộ subject (đầu + thân) để đạt tỷ lệ người thật.
           Áp dụng đúng trang phục từ ẢNH 3 (NAM) hoặc ẢNH 4 (NỮ) khớp với cơ thể đã scale.
-          Đặt subject đúng tọa độ.
           Độ sâu dây: 2 dây foreground (blur) trước subject, 2 dây background sau subject.
           Kết quả = ẢNH 2 (không đổi) + subject đã ghép.
 
@@ -133,12 +132,11 @@ export class GeminiService {
         
           QUY TẮC CỨNG (THỨ TỰ ƯU TIÊN)
           1) Bảo toàn khuôn mặt (cao nhất)
-          giữ nguyên các đường nét đặc trưng của gương mặt: bao gồm: mắt,mũi,tai,má,màu tóc,da, lông mày,nốt ruồi, sẹo, môi
+          giữ nguyên các đường nét đặc trưng của gương mặt: mắt,mũi,tai,má,màu tóc,da, lông mày,nốt ruồi, sẹo, môi
           2) Template bất biến
           ẢNH 2 tuyệt đối không chỉnh sửa. 4 dây phải giữ nguyên (số lượng, vị trí, góc, blur, opacity, màu, text).
-          Foreground: 2 dây blur (chéo dưới góc trái, dọc trên bên phải) trước subject.
-          Background: 2 dây sắc nét sau subject.
-          Không được che mắt/mũi/miệng.2 dây background không che subject. 
+          Foreground: 2 dây blur (chéo dưới góc trái, dọc trên bên phải) trước subject. Không được che mắt/mũi/miệng.
+          Background: 2 dây sắc nét sau subject. 2 dây background không che subject  
           không tạo dây mới, không vẽ lại, không inpaint, không tưởng tượng, không chỉnh sửa background.
           3) Trang phục theo giới tính
           Xác định NAM/NỮ từ ẢNH 1.
