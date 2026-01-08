@@ -28,11 +28,9 @@ export interface GeminiModelConfig {
 export interface EditImageWithReferenceTemplateParams {
   prompt: string;
   inputImage: string;
-  backgroundTemplateImage: string;
   maleOutfitImage: string;
   femaleOutfitImage: string;
   inputMimeType?: string;
-  backgroundMimeType?: string;
   maleOutfitMimeType?: string;
   femaleOutfitMimeType?: string;
   aspectRatio?: string;
@@ -43,14 +41,12 @@ export interface EditImageWithReferenceTemplateParams {
 
 export interface BuildContentsWithBackgroundParams {
   mainImage: string,
-  backgroundImage: string,
   instruction: string,
   maleOutfitImage: string,
   femaleOutfitImage: string,
   maleOutfitMimeType: string,
   femaleOutfitMimeType: string,
   mainMime: string ,
-  backgroundMime: string ,
   referenceImage?: string,
   referenceImageMimeType?: string
 }

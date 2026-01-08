@@ -4,27 +4,8 @@ import { MemoryCacheService } from '../memory-cache/memory-cache.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { TemplatesService } from 'src/templates/templates.service';
-import { Style } from 'src/jobs/dto/create-job.dto';
 import * as fs from 'fs';
 import { join } from 'path';
-
-/**
- * Map style enum or string to outfit filenames (Male and Female)
- * Format: style enum/string -> { male: PascalCaseNam.png, female: PascalCaseNu.png }
- */
-function getOutfitFileNames(style: Style | string): { male: string; female: string } {
-  // Convert style to string to handle both enum and string values
-  const styleStr = String(style);
-  const styleMap: Record<string, { male: string; female: string }> = {
-    [Style.COOL_NGAU]: { male: 'CoolNgauNam.png', female: 'CoolNgauNu.png' },
-    [Style.NGHIEM_TUK]: { male: 'NghiemTukNam.png', female: 'NghiemTukNu.png' },
-    [Style.HUONG_NGOAI]: { male: 'HuongNgoaiNam.png', female: 'HuongNgoaiNu.png' },
-    [Style.CHILL_GUY]: { male: 'ChillGuyNam.png', female: 'ChillGuyNu.png' },
-    [Style.FASHION]: { male: 'FashionNam.png', female: 'FashionNu.png' },
-    [Style.BEO_XINH]: { male: 'BeoXinhNam.png', female: 'BeoXinhNu.png' },
-  };
-  return styleMap[styleStr] || styleMap[Style.COOL_NGAU];
-}
 
 @Processor('gen')
 export class GenConsumer {
@@ -46,7 +27,7 @@ export class GenConsumer {
   @Process('generate')
   async handleGenerate(job: Job) {
     console.log(`🔥🔥🔥 CONSUMER TRIGGERED! Job ID: ${job.id}`);  
-    const { jobId, file, prompt, templateId, aspectRatio = '1:1', style = 'cool_ngau' } = job.data;
+    const { jobId, file, prompt, aspectRatio = '1:1', id_request = '1-1' } = job.data;
     
     try {
       // Update job status
@@ -62,20 +43,17 @@ export class GenConsumer {
         message: 'Starting image generation...',
       });
 
-      // Get template
-      const template = await this.templatesService.getTemplate(templateId);
-      if (!template) {
-        throw new Error('Template not found');
+      // Get template bg paths for nam and nu based on id_request
+      const templateBg = await this.templatesService.getTemplateBg(id_request);
+      if (!templateBg) {
+        throw new Error(`Template bg not found for id_request: ${id_request}`);
       }
 
-      if (!template.backgroundPath) {
-        throw new Error('Template backgroundPath is required');
-      }
-
-      console.log('🎨 CONSUMER: Template info:', {
-        id: template.id,
-        name: template.name,
-        backgroundPath: template.backgroundPath,
+      console.log('🎨 CONSUMER: Template bg info:', {
+        id: templateBg.id,
+        name: templateBg.name,
+        namPath: templateBg.namPath,
+        nuPath: templateBg.nuPath,
         aspectRatio: aspectRatio
       });
 
@@ -90,99 +68,77 @@ export class GenConsumer {
         throw new Error('Invalid file buffer format');
       }
 
-      // Read reference template image (den.png or vang.png)
+      // Read nam and nu images (already contain pose, outfit, and background)
       await this.memoryCacheService.updateJobMetadata(jobId, {
         progress: 20,
-        message: 'Đang đọc ảnh template reference...',
+        message: 'Đang đọc ảnh template nam/nữ...',
       });
 
       this.realtimeService.emitJobProgress(jobId, {
         status: 'running',
         progress: 20,
-        message: 'Đang đọc ảnh template reference...',
+        message: 'Đang đọc ảnh template nam/nữ...',
       });
 
-      const backgroundTemplatePath = join(process.cwd(), 'public', template.overlayPath);
-      const backgroundTemplateBuffer = await fs.promises.readFile(backgroundTemplatePath);
-      const backgroundTemplateBase64 = backgroundTemplateBuffer.toString('base64');
+      const namImagePath = join(process.cwd(), 'public', templateBg.namPath);
+      const nuImagePath = join(process.cwd(), 'public', templateBg.nuPath);
+      
+      let namImageBuffer: Buffer;
+      let namImageBase64: string;
+      let namImageMimeType: string;
+      let nuImageBuffer: Buffer;
+      let nuImageBase64: string;
+      let nuImageMimeType: string;
+      
+      try {
+        // Read nam image
+        namImageBuffer = await fs.promises.readFile(namImagePath);
+        namImageBase64 = namImageBuffer.toString('base64');
+        namImageMimeType = this.getMimeType(namImagePath);
+        console.log('👤 CONSUMER: Nam image loaded:', templateBg.namPath, 'size:', namImageBuffer.length, 'bytes');
+      } catch (error) {
+        throw new Error(`Failed to load nam image from path: ${templateBg.namPath}`);
+      }
+      
+      try {
+        // Read nu image
+        nuImageBuffer = await fs.promises.readFile(nuImagePath);
+        nuImageBase64 = nuImageBuffer.toString('base64');
+        nuImageMimeType = this.getMimeType(nuImagePath);
+        console.log('👤 CONSUMER: Nu image loaded:', templateBg.nuPath, 'size:', nuImageBuffer.length, 'bytes');
+      } catch (error) {
+        throw new Error(`Failed to load nu image from path: ${templateBg.nuPath}`);
+      }
 
-      const backgroundMimeType = this.getMimeType(backgroundTemplatePath);
       const inputMimeType = file.mimetype || 'image/jpeg';
+      
+      console.log('🎨 CONSUMER: Images loaded - Input:', inputMimeType, 'Nam:', namImageMimeType, 'Nu:', nuImageMimeType);
 
-      // Read both male and female outfit images based on style (outfit already includes logo)
-      const outfitFileNames = getOutfitFileNames(style);
-      const maleOutfitPath = join(process.cwd(), 'public', 'templates', 'outfit', outfitFileNames.male);
-      const femaleOutfitPath = join(process.cwd(), 'public', 'templates', 'outfit', outfitFileNames.female);
-      
-      let maleOutfitBuffer: Buffer;
-      let maleOutfitBase64: string;
-      let maleOutfitMimeType: string;
-      let femaleOutfitBuffer: Buffer;
-      let femaleOutfitBase64: string;
-      let femaleOutfitMimeType: string;
-      
-      try {
-        // Read male outfit
-        maleOutfitBuffer = await fs.promises.readFile(maleOutfitPath);
-        maleOutfitBase64 = maleOutfitBuffer.toString('base64');
-        maleOutfitMimeType = this.getMimeType(maleOutfitPath);
-        console.log('👕 CONSUMER: Male outfit image loaded:', outfitFileNames.male, 'size:', maleOutfitBuffer.length, 'bytes');
-      } catch (error) {
-        console.warn(`⚠️ CONSUMER: Male outfit image not found for style ${style} (${outfitFileNames.male}), using default cool_ngau`);
-        // Fallback to cool_ngau if outfit not found
-        const defaultMaleOutfitPath = join(process.cwd(), 'public', 'templates', 'outfit', 'CoolNgauNam.png');
-        maleOutfitBuffer = await fs.promises.readFile(defaultMaleOutfitPath);
-        maleOutfitBase64 = maleOutfitBuffer.toString('base64');
-        maleOutfitMimeType = this.getMimeType(defaultMaleOutfitPath);
-      }
-      
-      try {
-        // Read female outfit
-        femaleOutfitBuffer = await fs.promises.readFile(femaleOutfitPath);
-        femaleOutfitBase64 = femaleOutfitBuffer.toString('base64');
-        femaleOutfitMimeType = this.getMimeType(femaleOutfitPath);
-        console.log('👕 CONSUMER: Female outfit image loaded:', outfitFileNames.female, 'size:', femaleOutfitBuffer.length, 'bytes');
-      } catch (error) {
-        console.warn(`⚠️ CONSUMER: Female outfit image not found for style ${style} (${outfitFileNames.female}), using default cool_ngau`);
-        // Fallback to cool_ngau if outfit not found
-        const defaultFemaleOutfitPath = join(process.cwd(), 'public', 'templates', 'outfit', 'CoolNgauNu.png');
-        femaleOutfitBuffer = await fs.promises.readFile(defaultFemaleOutfitPath);
-        femaleOutfitBase64 = femaleOutfitBuffer.toString('base64');
-        femaleOutfitMimeType = this.getMimeType(defaultFemaleOutfitPath);
-      }
-      
-      console.log('🎨 CONSUMER: Reference template loaded, size:', backgroundTemplateBuffer.length, 'bytes');
-    console.log('🎨 CONSUMER: MIME types - Input:', inputMimeType, 'Reference:', backgroundMimeType);
-
-      // AI Image Editing - Gửi cả ảnh chính và ảnh reference template cho AI
+      // AI Image Editing - Thay mặt từ input vào ảnh nam hoặc nữ tùy giới tính
       await this.memoryCacheService.updateJobMetadata(jobId, {
         progress: 40,
-        message: 'AI đang tạo ảnh theo template reference...',
+        message: 'AI đang thay mặt vào ảnh template...',
       });
 
       this.realtimeService.emitJobProgress(jobId, {
         status: 'running',
         progress: 40,
-        message: 'AI đang tạo ảnh theo template reference...',
+        message: 'AI đang thay mặt vào ảnh template...',
       });
 
-      // Sử dụng Gemini để tạo ảnh giống reference template nhưng với người từ ảnh chính
+      // Sử dụng Gemini để thay mặt từ input vào ảnh nam hoặc nữ (ảnh đã có sẵn pose, trang phục, background)
+      // Dùng nam image làm background template (tạm thời), AI sẽ chọn nam hoặc nữ dựa trên giới tính
       const result = await this.geminiService.editImageWithReferenceTemplate({
         prompt,
         inputImage: inputBuffer.toString('base64'),
-        backgroundTemplateImage: backgroundTemplateBase64,
-        maleOutfitImage: maleOutfitBase64,
-        femaleOutfitImage: femaleOutfitBase64,
+        maleOutfitImage: namImageBase64, // Ảnh nam đã có sẵn pose, trang phục, background
+        femaleOutfitImage: nuImageBase64, // Ảnh nữ đã có sẵn pose, trang phục, background
         inputMimeType,
-        backgroundMimeType,
-        maleOutfitMimeType,
-        femaleOutfitMimeType,
+        maleOutfitMimeType: namImageMimeType,
+        femaleOutfitMimeType: nuImageMimeType,
         aspectRatio,
-        style,
-        // referenceImage: referenceImageBase64,
-        // referenceImageMimeType: referenceImageMimeType,
       });
-      console.log('🎨 CONSUMER: Image created with reference template by Gemini, size:', result.length, 'bytes');
+      console.log('🎨 CONSUMER: Image created by Gemini, size:', result.length, 'bytes');
 
       // Save result
       await this.memoryCacheService.updateJobMetadata(jobId, {

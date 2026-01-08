@@ -31,4 +31,8 @@ export class CreateJobDto {
   @IsOptional()
   @IsEnum(Style)
   style?: Style = Style.COOL_NGAU;
+
+  @IsString()
+  @IsNotEmpty()
+  id_request: string;
 }

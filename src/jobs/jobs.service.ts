@@ -56,6 +56,7 @@ export class JobsService {
         templateId: createJobDto.templateId,
         aspectRatio: createJobDto.aspectRatio,
         style: createJobDto.style || 'cool_ngau',
+        id_request: createJobDto.id_request || '1-1',
       });
 
       // Store job metadata

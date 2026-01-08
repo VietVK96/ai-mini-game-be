@@ -1,0 +1,74 @@
+[
+  {
+    "id": "2-1",
+    "name": "den_beo_xinh",
+    "namPath":"templates/bg/nam/DEN_ZAPP_KhoiDayChatDzieng_Beoxinhh.png",
+    "nuPath":"templates/bg/nu/DEN_ZAPP_KhoiDayChatDzieng_Beoxinhh.png"
+  },
+  {
+    "id": "2-2",
+    "name": "den_chill_guy",
+    "namPath":"templates/bg/nam/DEN_ZAPP_KhoiDayChatDzieng_chillguy.png",
+    "nuPath":"templates/bg/nu/DEN_ZAPP_KhoiDayChatDzieng_chillguy.png"
+  },
+  {
+    "id": "2-3",
+    "name": "den_cool_ngau",
+    "namPath":"templates/bg/nam/DEN_ZAPP_KhoiDayChatDzieng_coolngau.png",
+    "nuPath":"templates/bg/nu/DEN_ZAPP_KhoiDayChatDzieng_coolngau.png"
+  },
+  {
+    "id": "2-4",
+    "name": "den_fashion",
+    "namPath":"templates/bg/nam/DEN_ZAPP_KhoiDayChatDzieng_fashion.png",
+    "nuPath":"templates/bg/nu/DEN_ZAPP_KhoiDayChatDzieng_fashion.png"
+  },
+  {
+    "id": "2-5",
+    "name": "den_huong_ngoai",
+    "namPath":"templates/bg/nam/DEN_ZAPP_KhoiDayChatDzieng_huongngoai.png",
+    "nuPath":"templates/bg/nu/DEN_ZAPP_KhoiDayChatDzieng_huongngoai.png"
+  },
+  {
+    "id": "2-6",
+    "name": "den_nghiem_tuk",
+    "namPath":"templates/bg/nam/DEN_ZAPP_KhoiDayChatDzieng_nghiemtuc.png",
+    "nuPath":"templates/bg/nu/DEN_ZAPP_KhoiDayChatDzieng_nghiemtuc.png"
+  },
+  {
+    "id": "1-1",
+    "name": "den_beo_xinh",
+    "namPath":"templates/bg/nam/VANG_ZAPP_KhoiDayChatDzieng_Beoxinhh.png",
+    "nuPath":"templates/bg/nu/VANG_ZAPP_KhoiDayChatDzieng_Beoxinhh.png"
+  },
+  {
+    "id": "1-2",
+    "name": "den_chill_guy",
+    "namPath":"templates/bg/nam/VANG_ZAPP_KhoiDayChatDzieng_chillguy.png",
+    "nuPath":"templates/bg/nu/VANG_ZAPP_KhoiDayChatDzieng_chillguy.png"
+  },
+  {
+    "id": "1-3",
+    "name": "den_cool_ngau",
+    "namPath":"templates/bg/nam/VANG_ZAPP_KhoiDayChatDzieng_coolngau.png",
+    "nuPath":"templates/bg/nu/VANG_ZAPP_KhoiDayChatDzieng_coolngau.png"
+  },
+  {
+    "id": "1-4",
+    "name": "den_fashion",
+    "namPath":"templates/bg/nam/VANG_ZAPP_KhoiDayChatDzieng_fashion.png",
+    "nuPath":"templates/bg/nu/VANG_ZAPP_KhoiDayChatDzieng_fashion.png"
+  },
+  {
+    "id": "1-5",
+    "name": "den_huong_ngoai",
+    "namPath":"templates/bg/nam/VANG_ZAPP_KhoiDayChatDzieng_huongngoai.png",
+    "nuPath":"templates/bg/nu/VANG_ZAPP_KhoiDayChatDzieng_huongngoai.png"
+  },
+  {
+    "id": "1-6",
+    "name": "den_nghiem_tuk",
+    "namPath":"templates/bg/nam/VANG_ZAPP_KhoiDayChatDzieng_nghiemtuc.png",
+    "nuPath":"templates/bg/nu/VANG_ZAPP_KhoiDayChatDzieng_nghiemtuc.png"
+  }
+]

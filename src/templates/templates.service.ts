@@ -57,4 +57,10 @@ export class TemplatesService {
     return file;
   }
 
+  async getTemplateBg(id: string) {
+    const bgPath = join(process.cwd(), 'public', 'templates', 'bg.json');
+    const bgData = await fs.promises.readFile(bgPath, 'utf8');
+    const bg = JSON.parse(bgData);
+   return bg.find(bg => bg.id === id);
+  }
 }

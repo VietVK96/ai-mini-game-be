@@ -33,6 +33,7 @@ async function bootstrap() {
           /^http:\/\/58\.186\.98\.56:(8001|8002)$/,
           /^http:\/\/42\.119\.155\.107:(8001|8002)$/,
           /^http:\/\/image-ai\.ddns\.net:(8001|8002)$/,
+          'https://zapp-khoidaychatdzieng.vn',
           
             // Allow specific IP
         ],
