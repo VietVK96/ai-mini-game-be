@@ -236,7 +236,6 @@ export class ShareService {
    * Get share page HTML with Open Graph tags
    */
   async getSharePageHtml(shareId: string): Promise<string> {
-    const isValid = await this.isShareValid(shareId);
     const app = this.configService.get('app');
     const fbAppId = app?.fbAppId;
     const sharePageUrl = `${this.publicBaseUrl}/s/${shareId}`;
@@ -255,16 +254,12 @@ export class ShareService {
     }
     const imageUrl = `${this.publicBaseUrl}/shares/${shareId}.jpg`;
 
-    if (!isValid) {
-      return this.getExpiredPageHtml();
-    }
-
     const ogTitle = 'ZAPP ẢNH AI - Tạo ảnh đẹp chỉ với một click!';
     const ogDescription = `Có ảnh mới là phải khoe liền!
-Một click mà ra Dziêng cỡ này, ai làm lại tui nữa?
-Ní nào muốn vượt mặt thì nhảy vào ZAPP ẢNH AI nè.
-👉Link ZAPP ảnh:https://zapp-khoidaychatdzieng.vn/
-#ZAPP #ZAPPCHATDZIENG #KHOIDAYCHATDZIENG`;
+    Một click mà ra Dziêng cỡ này, ai làm lại tui nữa?
+    Ní nào muốn vượt mặt thì nhảy vào ZAPP ẢNH AI nè.
+    👉Link ZAPP ảnh:https://zapp-khoidaychatdzieng.vn/
+    #ZAPP #ZAPPCHATDZIENG #KHOIDAYCHATDZIENG`;
     const ogType = 'website';
 
     let html = `<!DOCTYPE html>
