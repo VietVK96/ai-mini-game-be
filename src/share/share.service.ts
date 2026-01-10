@@ -260,13 +260,11 @@ export class ShareService {
     }
 
     const ogTitle = 'ZAPP ẢNH AI - Tạo ảnh đẹp chỉ với một click!';
-    const ogDescription = `Xin lỗi chứ nếu ảnh tui còn chưa Dziêng thì ai Dziêng cho nổi mấy ní?
-
-Click có một cái mà ra hình cỡ này, nhiều click chắc tui lên bìa tạp chí luôn 😌
-
-Ní nào mê ảnh đẹp thì vô ZAPP ẢNH AI thử liền nha!
-
-#ZAPP #ZAPPCHATDZIENG #khoidaychatdzieng #ZAPPANHAI`;
+    const ogDescription = `Có ảnh mới là phải khoe liền!
+Một click mà ra Dziêng cỡ này, ai làm lại tui nữa?
+Ní nào muốn vượt mặt thì nhảy vào ZAPP ẢNH AI nè.
+👉Link ZAPP ảnh:https://zapp-khoidaychatdzieng.vn/
+#ZAPP #ZAPPCHATDZIENG #KHOIDAYCHATDZIENG`;
     const ogType = 'website';
 
     let html = `<!DOCTYPE html>
@@ -304,17 +302,17 @@ Ní nào mê ảnh đẹp thì vô ZAPP ẢNH AI thử liền nha!
       </div>
       
       <div style="color: #333; margin: 30px 0; line-height: 1.8; font-size: 16px;">
-        <p style="margin-bottom: 15px;">Xin lỗi chứ nếu ảnh tui còn chưa Dziêng thì ai Dziêng cho nổi mấy ní? 😅</p>
-        <p style="margin-bottom: 15px;">Click có một cái mà ra hình cỡ này, nhiều click chắc tui lên bìa tạp chí luôn 😌</p>
-        <p style="margin-bottom: 30px; font-weight: bold;">Ní nào mê ảnh đẹp thì vô ZAPP ẢNH AI thử liền nha!</p>
+        <p style="margin-bottom: 15px;">Có ảnh mới là phải khoe liền!</p>
+        <p style="margin-bottom: 15px;">Một click mà ra Dziêng cỡ này, ai làm lại tui nữa?</p>
+        <p style="margin-bottom: 30px; font-weight: bold;">Ní nào muốn vượt mặt thì nhảy vào ZAPP ẢNH AI nè.</p>
       </div>
       
-      <a href="${this.appShareUrl}" style="display: inline-block; padding: 15px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 18px; box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s;">
-        👉 Link Zapp ảnh
+      <a href="https://zapp-khoidaychatdzieng.vn/" style="display: inline-block; padding: 15px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 18px; box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s;">
+        👉 Link ZAPP ảnh:https://zapp-khoidaychatdzieng.vn/
       </a>
       
       <div style="margin-top: 30px; color: #999; font-size: 14px;">
-        <p>#ZAPP #ZAPPCHATDZIENG #khoidaychatdzieng #ZAPPANHAI</p>
+        <p>#ZAPP #ZAPPCHATDZIENG #KHOIDAYCHATDZIENG</p>
       </div>
     </div>
   </div>
