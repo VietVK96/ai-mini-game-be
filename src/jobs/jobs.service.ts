@@ -28,15 +28,15 @@ export class JobsService {
     }
 
     this.genQueue.on('completed', (job, result) => {
-      console.log(`🎉 QUEUE EVENT: Job ${job.id} completed with result:`, result);
+      console.log(`[${new Date().toISOString()}] 🎉 QUEUE EVENT: Job ${job.id} completed with result:`, result);
     });
     
     this.genQueue.on('failed', (job, err) => {
-      console.log(`❌ QUEUE EVENT: Job ${job.id} failed with error:`, err);
+      console.log(`[${new Date().toISOString()}] ❌ QUEUE EVENT: Job ${job.id} failed with error:`, err);
     });
     
     this.genQueue.on('active', (job) => {
-      console.log(`🔄 QUEUE EVENT: Job ${job.id} is now active`);
+      console.log(`[${new Date().toISOString()}] 🔄 QUEUE EVENT: Job ${job.id} is now active`);
     });
 
     this.eventListenersInitialized = true;
@@ -81,7 +81,7 @@ export class JobsService {
   async getJobStream(jobId: string) {
     const metadata = await this.memoryCacheService.getJobMetadata(jobId);
     if (!metadata) {
-      console.log(`🔍 JOBS: Job not found: ${jobId}`);
+      console.log(`[${new Date().toISOString()}] 🔍 JOBS: Job not found: ${jobId}`);
       throw new NotFoundException('Job not found');
     }
 

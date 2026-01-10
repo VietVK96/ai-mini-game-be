@@ -20,7 +20,7 @@ async function bootstrap() {
   // CORS configuration
   app.enableCors({
     origin: process.env.NODE_ENV === 'production' 
-      ? ['https://yourdomain.com'] 
+      ? ['https://zapp-khoidaychatdzieng.vn'] 
       : [
           'http://localhost:3000', 
           'http://localhost:3001',
@@ -68,8 +68,8 @@ async function bootstrap() {
   const port = parseInt(process.env.API_PORT || '3001', 10);
   await app.listen(port,'0.0.0.0');
   
-  console.log(`🚀 Server running on http://localhost:${port}`);
-  console.log(`📚 API Documentation: http://localhost:${port}/api/v1`);
+  console.log(`[${new Date().toISOString()}] 🚀 Server running on http://localhost:${port}`);
+  console.log(`[${new Date().toISOString()}] 📚 API Documentation: http://localhost:${port}/api/v1`);
 }
 
 bootstrap();

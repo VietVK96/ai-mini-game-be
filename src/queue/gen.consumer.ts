@@ -26,7 +26,7 @@ export class GenConsumer {
 
   @Process('generate')
   async handleGenerate(job: Job) {
-    console.log(`🔥🔥🔥 CONSUMER TRIGGERED! Job ID: ${job.id}`);  
+    console.log(`[${new Date().toISOString()}] 🔥🔥🔥 CONSUMER TRIGGERED! Job ID: ${job.id}`);  
     const { jobId, file, prompt, aspectRatio = '1:1', id_request = '1-1' } = job.data;
     
     try {

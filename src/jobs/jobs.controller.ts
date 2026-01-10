@@ -75,10 +75,10 @@ export class JobsController {
   @Get(':id/stream')
   async streamJob(@Param('id') id: string, @Res() res: Response) {
     try {
-      console.log(`🌊 SSE: Starting SSE stream for job: ${id}`);
+      console.log(`[${new Date().toISOString()}] [${new Date().toISOString()}] 🌊 SSE: Starting SSE stream for job: ${id}`);
       
       const stream = await this.jobsService.getJobStream(id);
-      console.log(`🌊 SSE: Stream created for job: ${id}`);
+      console.log(`[${new Date().toISOString()}] 🌊 SSE: Stream created for job: ${id}`);
       
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
@@ -94,7 +94,7 @@ export class JobsController {
 
       // Handle client disconnect
       res.on('close', () => {
-        console.log(`SSE stream closed for job: ${id}`);
+        console.log(`[${new Date().toISOString()}] SSE stream closed for job: ${id}`);
         stream.destroy();
         // Clean up stream from realtime service
         this.jobsService.closeJobStream(id);
