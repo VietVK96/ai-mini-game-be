@@ -294,7 +294,7 @@ Ní nào muốn vượt mặt thì nhảy vào ZAPP ẢNH AI nè.
   <meta name="twitter:image" content="${ogImageUrl}">
 </head>
 <body>
-  <div style="text-align: center; padding: 50px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white;">
+  <div style="text-align: center; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white;">
     <div style="max-width: 800px; margin: 0 auto; background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
       <h1 style="color: #667eea; margin-bottom: 20px; font-size: 28px;">ZAPP ẢNH AI</h1>
       <div style="width: 100%; display: flex; justify-content: center; align-items: center; margin: 20px 0;">
@@ -308,7 +308,7 @@ Ní nào muốn vượt mặt thì nhảy vào ZAPP ẢNH AI nè.
       </div>
       
       <a href="https://zapp-khoidaychatdzieng.vn/" style="display: inline-block; padding: 15px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 18px; box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); transition: transform 0.2s;">
-        👉 Link ZAPP ảnh:https://zapp-khoidaychatdzieng.vn/
+        👉 Link ZAPP ảnh
       </a>
       
       <div style="margin-top: 30px; color: #999; font-size: 14px;">
